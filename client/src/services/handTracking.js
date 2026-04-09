@@ -43,9 +43,26 @@ async function getHandLandmarker() {
 export async function initializeHandTracking(videoElement, onResults) {
   const landmarker = await getHandLandmarker()
 
-  // Need webcam to be playing
+  // Start webcam FIRST
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' },
+      audio: false,
+    })
+    videoElement.srcObject = stream
+    await videoElement.play()
+  } catch (e) {
+    console.error('Webcam access failed:', e)
+    throw e
+  }
+
+  // Wait for video to be ready
   if (videoElement.readyState < 2) {
-    await new Promise(r => { videoElement.onloadeddata = r })
+    await new Promise((resolve) => {
+      videoElement.onloadeddata = resolve
+      // Safety timeout
+      setTimeout(resolve, 3000)
+    })
   }
 
   isRunning = true
@@ -60,15 +77,12 @@ export async function initializeHandTracking(videoElement, onResults) {
 
       try {
         const results = landmarker.detectForVideo(videoElement, now)
-
-        // Convert to our format (compatible with existing normalization/comparison code)
         const combined = {
           hands: {
             multiHandLandmarks: results.landmarks || [],
           },
           pose: null,
         }
-
         onResults(combined)
       } catch (e) {
         // Skip frame
@@ -78,17 +92,6 @@ export async function initializeHandTracking(videoElement, onResults) {
     if (isRunning) {
       animationId = requestAnimationFrame(detect)
     }
-  }
-
-  // Start webcam
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 640, height: 480 },
-    })
-    videoElement.srcObject = stream
-    await videoElement.play()
-  } catch (e) {
-    console.error('Webcam access failed:', e)
   }
 
   detect()
