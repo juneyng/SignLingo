@@ -170,14 +170,16 @@ function UploadTab({ lang, result, setResult, setVideoFile, selectedSignId, cust
       await new Promise(r => setTimeout(r, 50))
 
       let handData = null
+      let poseData = null
       try {
         const results = await analyzeFrame(canvas)
         if (results?.multiHandLandmarks?.length > 0) {
           handData = normalizeLandmarks(results.multiHandLandmarks[0].map(p => ({x:p.x,y:p.y,z:p.z})))
         }
-      } catch { handData = null }
-
-      const poseData = null
+        if (results?.poseLandmarks) {
+          poseData = normalizePoseLandmarks(results.poseLandmarks)
+        }
+      } catch { /* skip frame */ }
 
       if (handData) handCount++
       if (poseData) poseCount++
