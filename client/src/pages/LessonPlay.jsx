@@ -23,6 +23,7 @@ export default function LessonPlay() {
   const { t, lang } = useLanguage()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
+  const refVideoRef = useRef(null)
 
   const unit = getUnit(lessonId)
   const signs = unit.signs
@@ -49,6 +50,17 @@ export default function LessonPlay() {
 
   const currentSign = signs[currentIndex]
   const usesPose = !!currentSign.poseLandmarks
+
+  // Pause reference video during recording/analysis to free up resources
+  useEffect(() => {
+    const v = refVideoRef.current
+    if (!v) return
+    if (phase === PHASE.WATCH || phase === PHASE.RESULT) {
+      v.play().catch(() => {})
+    } else {
+      v.pause()
+    }
+  }, [phase])
 
   // Load saved reference video from IndexedDB when sign changes
   useEffect(() => {
@@ -255,6 +267,7 @@ export default function LessonPlay() {
           {(localVideoUrl || currentSign.videoUrl) ? (
             <div className="rounded-2xl overflow-hidden mb-4" style={{ border: `2px solid ${localVideoUrl ? COLORS.green : COLORS.gray200}` }}>
               <video
+                ref={refVideoRef}
                 key={currentSign.id + (localVideoUrl ? '_local' : '_remote')}
                 src={localVideoUrl || currentSign.videoUrl}
                 className="w-full"
@@ -305,22 +318,22 @@ export default function LessonPlay() {
               </span>
             </div>
 
-            {/* Backdrop when modal is active */}
-            {(phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) && (
-              <div className="fixed inset-0 z-40 bg-black/70 animate-[fadeIn_0.3s_ease]" />
-            )}
-
+            {/* Wrapper: full-screen flex centered when in modal mode */}
+            <div
+              className={
+                (phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING)
+                  ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-[fadeIn_0.3s_ease]'
+                  : 'contents'
+              }
+            >
             {/* Webcam with overlays */}
             <div
-              className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                (phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) ? 'fixed top-1/2 left-1/2 z-50' : ''
-              }`}
+              className="relative rounded-2xl overflow-hidden transition-all duration-300"
               style={{
                 border: `3px ${phase === PHASE.RECORDING ? 'solid' : 'dashed'} ${phase === PHASE.RECORDING ? COLORS.red : COLORS.green}60`,
                 ...((phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) ? {
                   width: '60vw',
                   maxWidth: '900px',
-                  transform: 'translate(-50%, -50%)',
                 } : {}),
               }}>
               <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
@@ -359,6 +372,7 @@ export default function LessonPlay() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
 
             {/* Action button based on phase */}

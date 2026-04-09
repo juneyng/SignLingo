@@ -341,44 +341,45 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
           </span>
         </div>
 
-        {/* Backdrop when modal is active */}
-        {(isRecording || countdown > 0) && (
-          <div className="fixed inset-0 z-40 bg-black/70 animate-[fadeIn_0.3s_ease]" />
-        )}
-
+        {/* Wrapper: full-screen flex centered when in modal mode */}
         <div
-          className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-            (isRecording || countdown > 0) ? 'fixed top-1/2 left-1/2 z-50' : ''
-          }`}
-          style={{
-            border: `3px ${isRecording ? 'solid' : 'dashed'} ${isRecording ? COLORS.red : COLORS.green}60`,
-            ...((isRecording || countdown > 0) ? {
-              width: '60vw',
-              maxWidth: '900px',
-              transform: 'translate(-50%, -50%)',
-            } : {}),
-          }}
+          className={
+            (isRecording || countdown > 0)
+              ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-[fadeIn_0.3s_ease]'
+              : 'contents'
+          }
         >
-          <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
-          <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
+          <div
+            className="relative rounded-2xl overflow-hidden transition-all duration-300"
+            style={{
+              border: `3px ${isRecording ? 'solid' : 'dashed'} ${isRecording ? COLORS.red : COLORS.green}60`,
+              ...((isRecording || countdown > 0) ? {
+                width: '60vw',
+                maxWidth: '900px',
+              } : {}),
+            }}
+          >
+            <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
+            <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
 
-          {countdown > 0 && !isRecording && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <span className="text-8xl font-black text-white animate-ping">{countdown}</span>
-            </div>
-          )}
-          {isRecording && (
-            <div className="absolute top-3 left-3 right-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: COLORS.red }} />
-                <span className="text-xs font-black text-white drop-shadow">REC — {frameCount} frames</span>
-                <span className="text-xs font-bold text-white/70 ml-auto">{Math.ceil(RECORD_DURATION - recordProgress * RECORD_DURATION)}s</span>
+            {countdown > 0 && !isRecording && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <span className="text-8xl font-black text-white animate-ping">{countdown}</span>
               </div>
-              <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.3)' }}>
-                <div className="h-1.5 rounded-full transition-all" style={{ width: `${recordProgress * 100}%`, background: COLORS.red }} />
+            )}
+            {isRecording && (
+              <div className="absolute top-3 left-3 right-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: COLORS.red }} />
+                  <span className="text-xs font-black text-white drop-shadow">REC — {frameCount} frames</span>
+                  <span className="text-xs font-bold text-white/70 ml-auto">{Math.ceil(RECORD_DURATION - recordProgress * RECORD_DURATION)}s</span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.3)' }}>
+                  <div className="h-1.5 rounded-full transition-all" style={{ width: `${recordProgress * 100}%`, background: COLORS.red }} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <Button3D fullWidth className="mt-4" onClick={startCountdown}
