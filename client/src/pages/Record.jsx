@@ -341,8 +341,24 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
           </span>
         </div>
 
-        <div className="relative rounded-2xl overflow-hidden"
-          style={{ border: `3px ${isRecording ? 'solid' : 'dashed'} ${isRecording ? COLORS.red : COLORS.green}60` }}>
+        {/* Backdrop when modal is active */}
+        {(isRecording || countdown > 0) && (
+          <div className="fixed inset-0 z-40 bg-black/70 animate-[fadeIn_0.3s_ease]" />
+        )}
+
+        <div
+          className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
+            (isRecording || countdown > 0) ? 'fixed top-1/2 left-1/2 z-50' : ''
+          }`}
+          style={{
+            border: `3px ${isRecording ? 'solid' : 'dashed'} ${isRecording ? COLORS.red : COLORS.green}60`,
+            ...((isRecording || countdown > 0) ? {
+              width: '60vw',
+              maxWidth: '900px',
+              transform: 'translate(-50%, -50%)',
+            } : {}),
+          }}
+        >
           <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
           <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
 

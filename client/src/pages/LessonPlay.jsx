@@ -305,9 +305,24 @@ export default function LessonPlay() {
               </span>
             </div>
 
+            {/* Backdrop when modal is active */}
+            {(phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) && (
+              <div className="fixed inset-0 z-40 bg-black/70 animate-[fadeIn_0.3s_ease]" />
+            )}
+
             {/* Webcam with overlays */}
-            <div className="relative rounded-2xl overflow-hidden"
-              style={{ border: `3px ${phase === PHASE.RECORDING ? 'solid' : 'dashed'} ${phase === PHASE.RECORDING ? COLORS.red : COLORS.green}60` }}>
+            <div
+              className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
+                (phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) ? 'fixed top-1/2 left-1/2 z-50' : ''
+              }`}
+              style={{
+                border: `3px ${phase === PHASE.RECORDING ? 'solid' : 'dashed'} ${phase === PHASE.RECORDING ? COLORS.red : COLORS.green}60`,
+                ...((phase === PHASE.COUNTDOWN || phase === PHASE.RECORDING) ? {
+                  width: '60vw',
+                  maxWidth: '900px',
+                  transform: 'translate(-50%, -50%)',
+                } : {}),
+              }}>
               <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
               <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
 
