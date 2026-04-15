@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Upload, Play, Square, Download, Save, RotateCcw, CheckCircle, AlertTriangle, Video, Camera } from 'lucide-react'
+import { ArrowLeft, Upload, Play, Square, Download, Save, RotateCcw, CheckCircle, AlertTriangle, Video, Camera, X, Eye, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, Badge } from '@/design-system/components'
 import { initializeHandTracking, stopHandTracking, drawLandmarks, analyzeFrame } from '@/services/handTracking'
 import { normalizeLandmarks, normalizePoseLandmarks } from '@/utils/normalizeLandmarks'
-import { ALL_SIGNS } from '@/data/signDatabase'
-import { saveRecordedSign, saveSignVideo } from '@/services/signStorage'
+import { ALL_SIGNS, UNITS } from '@/data/signDatabase'
+import { saveRecordedSign, getRecordedSign, preloadRecordedSigns, deleteRecordedSign } from '@/services/signStorage'
 import useLanguage from '@/stores/useLanguage'
 
 const RECORD_DURATION = 6
@@ -100,8 +100,171 @@ export default function Record() {
           selectedSignId={selectedSignId} customName={customName} customNameEn={customNameEn} />
       )}
 
+      {/* Registration status dashboard */}
+      <RegistrationStatus lang={lang} onPick={setSelectedSignId} lastSavedResult={result} />
+
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     </div>
+  )
+}
+
+// ============================================================
+// Registration Status Dashboard
+// ============================================================
+function RegistrationStatus({ lang, onPick, lastSavedResult }) {
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [preview, setPreview] = useState(null) // { signId, videoUrl, name_ko, name_en }
+  const [loading, setLoading] = useState(true)
+
+  // Refresh when a new recording is saved
+  useEffect(() => {
+    setLoading(true)
+    preloadRecordedSigns().then(() => {
+      setLoading(false)
+      setRefreshKey(k => k + 1)
+    })
+  }, [lastSavedResult])
+
+  const registered = ALL_SIGNS.filter(s => getRecordedSign(s.id)).length
+  const total = ALL_SIGNS.length
+
+  const handleDelete = async (signId) => {
+    if (!window.confirm(lang === 'ko' ? '이 등록된 영상을 삭제할까요?' : 'Delete this registered recording?')) return
+    try {
+      await deleteRecordedSign(signId)
+      setRefreshKey(k => k + 1)
+    } catch (e) {
+      alert(lang === 'ko' ? '삭제 실패: ' + e.message : 'Delete failed: ' + e.message)
+    }
+  }
+
+  return (
+    <Card3D color={COLORS.gray200} padding="p-5" className="mt-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-extrabold text-sm" style={{ color: COLORS.gray800 }}>
+          {lang === 'ko' ? '등록 현황' : 'Registration Status'}
+        </h2>
+        <Badge color={registered === total ? COLORS.green : registered > 0 ? COLORS.blue : COLORS.gray400}>
+          {registered}/{total} {lang === 'ko' ? '완료' : 'registered'}
+        </Badge>
+      </div>
+
+      {loading && (
+        <p className="text-xs font-bold" style={{ color: COLORS.gray400 }}>
+          {lang === 'ko' ? '불러오는 중...' : 'Loading...'}
+        </p>
+      )}
+
+      <div className="space-y-4" key={refreshKey}>
+        {UNITS.map((unit) => {
+          const unitDone = unit.signs.filter(s => getRecordedSign(s.id)).length
+          return (
+            <div key={unit.id}>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-extrabold text-xs" style={{ color: COLORS.gray700 }}>
+                  {lang === 'ko' ? unit.titleKo : unit.titleEn}
+                </h3>
+                <span className="text-[10px] font-bold" style={{ color: COLORS.gray400 }}>
+                  {unitDone}/{unit.signs.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {unit.signs.map((sign) => {
+                  const rec = getRecordedSign(sign.id)
+                  const done = !!rec
+                  return (
+                    <div key={sign.id}
+                      className="flex items-center gap-2 p-2 rounded-xl"
+                      style={{
+                        background: done ? COLORS.greenLight : COLORS.gray50,
+                        border: `2px solid ${done ? COLORS.green + '40' : COLORS.gray200}`,
+                      }}>
+                      {done
+                        ? <CheckCircle size={16} color={COLORS.green} strokeWidth={2.5} className="flex-shrink-0" />
+                        : <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ border: `2px solid ${COLORS.gray300}` }} />
+                      }
+                      <div className="flex-1 min-w-0">
+                        <p className="font-extrabold text-xs truncate" style={{ color: COLORS.gray800 }}>
+                          {sign.name_ko} <span className="font-normal" style={{ color: COLORS.gray400 }}>({sign.name_en})</span>
+                        </p>
+                        {done && rec.savedAt && (
+                          <p className="text-[9px] font-semibold" style={{ color: COLORS.gray400 }}>
+                            {new Date(rec.savedAt).toLocaleDateString()}
+                            {rec.totalFrames && ` · ${rec.totalFrames} frames`}
+                          </p>
+                        )}
+                      </div>
+                      {done ? (
+                        <>
+                          {rec.videoUrl && (
+                            <button
+                              onClick={() => setPreview({ signId: sign.id, videoUrl: rec.videoUrl, name_ko: sign.name_ko, name_en: sign.name_en })}
+                              className="p-1.5 rounded-lg cursor-pointer hover:scale-110 transition-transform"
+                              style={{ background: COLORS.blue + '20' }}
+                              title={lang === 'ko' ? '영상 확인' : 'Preview'}
+                            >
+                              <Eye size={12} color={COLORS.blue} strokeWidth={2.5} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(sign.id)}
+                            className="p-1.5 rounded-lg cursor-pointer hover:scale-110 transition-transform"
+                            style={{ background: COLORS.red + '20' }}
+                            title={lang === 'ko' ? '삭제' : 'Delete'}
+                          >
+                            <Trash2 size={12} color={COLORS.red} strokeWidth={2.5} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => onPick(sign.id)}
+                          className="px-2 py-1 rounded-lg cursor-pointer hover:scale-105 transition-transform text-[10px] font-bold"
+                          style={{ background: COLORS.gray200, color: COLORS.gray700 }}
+                        >
+                          {lang === 'ko' ? '선택' : 'Select'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Video preview modal */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-[fadeIn_0.2s_ease]"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="rounded-2xl overflow-hidden max-w-2xl w-full mx-4"
+            style={{ background: COLORS.white, border: `2px solid ${COLORS.green}`, borderBottom: `5px solid ${COLORS.greenDark}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3" style={{ borderBottom: `2px solid ${COLORS.gray200}` }}>
+              <div>
+                <p className="font-black text-sm" style={{ color: COLORS.gray800 }}>{preview.name_ko}</p>
+                <p className="text-[10px] font-bold" style={{ color: COLORS.gray500 }}>{preview.name_en}</p>
+              </div>
+              <button onClick={() => setPreview(null)} className="cursor-pointer hover:scale-110 transition-transform">
+                <X size={20} color={COLORS.gray500} strokeWidth={2.5} />
+              </button>
+            </div>
+            <video
+              src={preview.videoUrl}
+              className="w-full"
+              controls
+              autoPlay
+              loop
+              style={{ background: COLORS.gray900 }}
+            />
+          </div>
+        </div>
+      )}
+    </Card3D>
   )
 }
 
@@ -267,10 +430,13 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
   const [recordProgress, setRecordProgress] = useState(0)
   const [countdown, setCountdown] = useState(0)
   const [frameCount, setFrameCount] = useState(0)
+  const [recordedBlob, setRecordedBlob] = useState(null)
 
   const framesRef = useRef([])
   const timerRef = useRef(null)
   const countdownRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const chunksRef = useRef([])
 
   useEffect(() => {
     if (!videoRef.current) return
@@ -296,6 +462,31 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
 
   const startRecording = () => {
     framesRef.current = []; setIsRecording(true); setRecordProgress(0); setFrameCount(0)
+    setRecordedBlob(null)
+    chunksRef.current = []
+
+    // Start MediaRecorder to capture the actual webcam video
+    try {
+      const stream = videoRef.current?.srcObject
+      if (stream) {
+        // Pick the best supported mime type
+        const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+        const mimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || ''
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+        }
+        recorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: mimeType || 'video/webm' })
+          setRecordedBlob(blob)
+        }
+        recorder.start()
+        mediaRecorderRef.current = recorder
+      }
+    } catch (e) {
+      console.warn('MediaRecorder failed:', e)
+    }
+
     const startTime = Date.now()
 
     timerRef.current = setInterval(() => {
@@ -320,6 +511,10 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
 
       if (elapsed >= RECORD_DURATION) {
         clearInterval(timerRef.current); setIsRecording(false)
+        // Stop MediaRecorder → onstop handler will set recordedBlob
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          try { mediaRecorderRef.current.stop() } catch {}
+        }
         buildResult(framesRef.current, Math.floor(RECORD_DURATION * CAPTURE_FPS), RECORD_DURATION,
           framesRef.current.length, framesRef.current.filter(f => f.pose).length, setResult, () => {}, lang)
       }
@@ -389,7 +584,7 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
         </Button3D>
       </Card3D>
 
-      <ResultPanel result={result} lang={lang} selectedSignId={selectedSignId} customName={customName} customNameEn={customNameEn} videoFile={null} />
+      <ResultPanel result={result} lang={lang} selectedSignId={selectedSignId} customName={customName} customNameEn={customNameEn} videoFile={recordedBlob} />
     </div>
   )
 }
@@ -428,16 +623,13 @@ function ResultPanel({ result, lang, selectedSignId, customName, customNameEn, v
       alert(lang === 'ko' ? '먼저 위에서 수어를 선택해주세요!' : 'Please select a sign first!')
       return
     }
-    saveRecordedSign(selectedSignId, result)
-    // Save video file to IndexedDB if available
-    if (videoFile) {
-      try {
-        await saveSignVideo(selectedSignId, videoFile)
-      } catch (e) {
-        console.warn('Failed to save video:', e)
-      }
+    try {
+      await saveRecordedSign(selectedSignId, result, videoFile)
+      setSaved(true)
+    } catch (e) {
+      console.error('Save failed:', e)
+      alert(lang === 'ko' ? '저장 실패: ' + e.message : 'Save failed: ' + e.message)
     }
-    setSaved(true)
   }
 
   const exportJSON = () => {

@@ -170,12 +170,21 @@ export function drawLandmarks(canvasElement, combinedResults) {
         ctx.stroke()
       }
     }
-    // Joint dots
+    // Joint dots — body
     for (const idx of [11, 12, 13, 14, 15, 16, 23, 24]) {
       if (pl[idx]) {
         ctx.beginPath()
         ctx.arc(pl[idx].x * canvasElement.width, pl[idx].y * canvasElement.height, 5, 0, 2 * Math.PI)
         ctx.fillStyle = '#1CB0F6'
+        ctx.fill()
+      }
+    }
+    // Face landmarks — nose, eyes, ears, mouth
+    for (const idx of [0, 2, 5, 7, 8, 9, 10]) {
+      if (pl[idx]) {
+        ctx.beginPath()
+        ctx.arc(pl[idx].x * canvasElement.width, pl[idx].y * canvasElement.height, 3, 0, 2 * Math.PI)
+        ctx.fillStyle = '#CE82FF'
         ctx.fill()
       }
     }

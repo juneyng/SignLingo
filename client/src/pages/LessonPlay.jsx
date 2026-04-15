@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, X, Check, Play, ChevronRight, ExternalLink, RotateCcw, Eye } from 'lucide-react'
+import { ArrowLeft, X, Check, Play, ChevronRight, ExternalLink, RotateCcw, Eye, Video, AlertCircle } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, FeedbackCard, Badge } from '@/design-system/components'
 import { AccuracyGauge, HandMascot } from '@/design-system/icons'
@@ -62,18 +62,11 @@ export default function LessonPlay() {
     }
   }, [phase])
 
-  // Load saved reference video from IndexedDB when sign changes
+  // Load saved reference video (Supabase URL or IndexedDB blob URL) when sign changes
   useEffect(() => {
-    let url = null
-    getSignVideo(currentSign.id).then((blob) => {
-      if (blob) {
-        url = URL.createObjectURL(blob)
-        setLocalVideoUrl(url)
-      } else {
-        setLocalVideoUrl(null)
-      }
-    }).catch(() => setLocalVideoUrl(null))
-    return () => { if (url) URL.revokeObjectURL(url) }
+    getSignVideo(currentSign.id)
+      .then((urlOrNull) => setLocalVideoUrl(urlOrNull))
+      .catch(() => setLocalVideoUrl(null))
   }, [currentSign.id])
   const unitTitle = lang === 'ko' ? unit.titleKo : unit.titleEn
   const desc = lang === 'ko' ? (currentSign.description_ko || currentSign.description) : currentSign.description
@@ -264,12 +257,12 @@ export default function LessonPlay() {
           </div>
 
           {/* Reference video — priority: localStorage > database videoUrl > text fallback */}
-          {(localVideoUrl || currentSign.videoUrl) ? (
+          {localVideoUrl ? (
             <div className="rounded-2xl overflow-hidden mb-4" style={{ border: `2px solid ${localVideoUrl ? COLORS.green : COLORS.gray200}` }}>
               <video
                 ref={refVideoRef}
                 key={currentSign.id + (localVideoUrl ? '_local' : '_remote')}
-                src={localVideoUrl || currentSign.videoUrl}
+                src={localVideoUrl}
                 className="w-full"
                 controls
                 autoPlay
@@ -287,9 +280,26 @@ export default function LessonPlay() {
               )}
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden mb-4" style={{ background: COLORS.gray50, border: `2px solid ${COLORS.gray200}` }}>
-              <div className="flex items-center justify-center py-8">
-                <p className="text-5xl font-black" style={{ color: COLORS.gray800 }}>{currentSign.name_ko}</p>
+            <div className="rounded-2xl overflow-hidden mb-4" style={{ background: COLORS.orangeBg, border: `2px dashed ${COLORS.orange}80` }}>
+              <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                <AlertCircle size={32} color={COLORS.orange} strokeWidth={2.5} />
+                <p className="text-4xl font-black mt-3" style={{ color: COLORS.gray800 }}>{currentSign.name_ko}</p>
+                <p className="font-extrabold text-sm mt-3" style={{ color: COLORS.orangeDark }}>
+                  {lang === 'ko' ? '참고 영상이 아직 등록되지 않았어요' : 'No reference video registered yet'}
+                </p>
+                <p className="text-xs font-bold mt-1" style={{ color: COLORS.gray600 }}>
+                  {lang === 'ko'
+                    ? '녹화 페이지에서 이 수어의 참고 영상을 등록해주세요.'
+                    : 'Register a reference video for this sign on the Record page.'}
+                </p>
+                <button
+                  onClick={() => navigate('/record')}
+                  className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer hover:scale-105 transition-transform"
+                  style={{ background: COLORS.orange, color: 'white', borderBottom: `3px solid ${COLORS.orangeDark}` }}
+                >
+                  <Video size={14} />
+                  {lang === 'ko' ? '녹화 페이지로 이동' : 'Go to Record'}
+                </button>
               </div>
             </div>
           )}

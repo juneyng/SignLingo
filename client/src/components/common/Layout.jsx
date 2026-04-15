@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Home, BookOpen, Target, BarChart3, Settings, Star, PanelRightClose, PanelRightOpen, Video, HelpCircle } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
@@ -8,6 +8,7 @@ import useAuth from '@/hooks/useAuth'
 import { signOut } from '@/services/auth'
 import useLanguage from '@/stores/useLanguage'
 import OnboardingTour from './OnboardingTour'
+import { preloadRecordedSigns } from '@/services/signStorage'
 
 export default function Layout() {
   const location = useLocation()
@@ -15,6 +16,9 @@ export default function Layout() {
   const { user } = useAuth()
   const { t, lang, toggle } = useLanguage()
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
+
+  // Preload sign recordings from Supabase once on mount
+  useEffect(() => { preloadRecordedSigns() }, [])
 
   const navItems = [
     { path: '/', label: t.navHome, icon: Home },
