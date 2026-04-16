@@ -26,12 +26,22 @@ const videoCache = new Map() // signId → object URL (for IndexedDB fallback)
  * Call early on app start to warm the cache.
  */
 export async function preloadRecordedSigns() {
-  if (!isSupabaseConfigured) return
+  if (!isSupabaseConfigured) {
+    console.log('[signStorage] Supabase NOT configured — using localStorage only')
+    return
+  }
   try {
     const { data, error } = await supabase
       .from('sign_recordings')
       .select('*')
     if (error) throw error
+    console.log(`[signStorage] Loaded ${data?.length || 0} recordings from Supabase:`,
+      data?.map(r => ({
+        sign_id: r.sign_id,
+        hasSequence: !!r.sequence,
+        sequenceFrames: r.sequence?.length || 0,
+        hasVideo: !!r.video_url,
+      })))
     for (const row of data || []) {
       cache.set(row.sign_id, {
         sequence: row.sequence,
@@ -44,7 +54,7 @@ export async function preloadRecordedSigns() {
       })
     }
   } catch (e) {
-    console.warn('[signStorage] preload failed:', e.message)
+    console.error('[signStorage] preload failed:', e.message, e)
   }
 }
 
@@ -128,8 +138,18 @@ export async function saveRecordedSign(signId, data, videoBlob = null) {
     detection_rate: data.detectionRate,
     uploaded_at: new Date().toISOString(),
   }
+  console.log('[signStorage] Upserting row:', {
+    sign_id: row.sign_id,
+    sequenceFrames: row.sequence?.length,
+    hasLandmarks: !!row.landmarks,
+    hasVideoUrl: !!row.video_url,
+  })
   const { error } = await supabase.from('sign_recordings').upsert(row)
-  if (error) throw error
+  if (error) {
+    console.error('[signStorage] Upsert FAILED:', error)
+    throw error
+  }
+  console.log('[signStorage] Upsert succeeded for', signId)
 
   // 3. Update cache
   cache.set(signId, {
