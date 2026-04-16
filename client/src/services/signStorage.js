@@ -8,11 +8,18 @@ import { supabase, isSupabaseConfigured } from './supabase'
 
 const VIDEO_BUCKET = 'sign-videos'
 const cache = new Map()
+let preloadDone = null // resolved promise when preload is complete
 
 /**
  * Fetch all recorded signs from Supabase and cache them.
  */
 export async function preloadRecordedSigns() {
+  if (preloadDone) return preloadDone
+  preloadDone = _doPreload()
+  return preloadDone
+}
+
+async function _doPreload() {
   if (!isSupabaseConfigured) {
     console.warn('[signStorage] Supabase NOT configured — recordings will not work')
     return

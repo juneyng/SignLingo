@@ -9,7 +9,7 @@ import { normalizeLandmarks, normalizePoseLandmarks } from '@/utils/normalizeLan
 import { compareRecordedSign, findDifferingLandmarks } from '@/utils/compareSigns'
 import { generateFeedback, generatePoseFeedback } from '@/utils/feedbackGenerator'
 import { getUnit } from '@/data/signDatabase'
-import { getSignVideo, getRecordedSign } from '@/services/signStorage'
+import { getSignVideo, getRecordedSign, preloadRecordedSigns } from '@/services/signStorage'
 import useLanguage from '@/stores/useLanguage'
 
 const RECORD_DURATION = 6 // seconds
@@ -62,9 +62,10 @@ export default function LessonPlay() {
     }
   }, [phase])
 
-  // Load saved reference video (Supabase URL or IndexedDB blob URL) when sign changes
+  // Wait for Supabase preload, then load reference video
   useEffect(() => {
-    getSignVideo(currentSign.id)
+    preloadRecordedSigns()
+      .then(() => getSignVideo(currentSign.id))
       .then((urlOrNull) => setLocalVideoUrl(urlOrNull))
       .catch(() => setLocalVideoUrl(null))
   }, [currentSign.id])
