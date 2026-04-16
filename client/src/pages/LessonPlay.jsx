@@ -256,7 +256,7 @@ export default function LessonPlay() {
             {currentSign.type === 'dynamic' && <Badge color={COLORS.purple}>{lang === 'ko' ? '동적' : 'Dynamic'}</Badge>}
           </div>
 
-          {/* Reference video — priority: localStorage > database videoUrl > text fallback */}
+          {/* Reference video from Supabase */}
           {localVideoUrl ? (
             <div className="rounded-2xl overflow-hidden mb-4" style={{ border: `2px solid ${localVideoUrl ? COLORS.green : COLORS.gray200}` }}>
               <video

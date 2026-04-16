@@ -98,11 +98,11 @@ export function compareSignFull(userFeatures, refSign, weights = { hand: 0.6, po
  * @returns {{ score, handScore, poseScore, hasSequence }}
  */
 export function compareRecordedSign(userSequence, refSign) {
-  // Check localStorage for recorded reference data first
+  // Check Supabase cache for recorded reference data
   const localRef = getRecordedSign(refSign.id)
   const sequence = localRef?.sequence || refSign.sequence
 
-  // If reference has sequence data (from localStorage or database), use DTW
+  // If reference has sequence data (from Supabase), use DTW
   if (sequence && sequence.length > 0) {
     const userLen = userSequence[0]?.length || 0
     const refLen = sequence[0]?.length || 0
