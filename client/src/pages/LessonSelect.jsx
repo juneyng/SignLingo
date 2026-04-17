@@ -85,7 +85,7 @@ export default function LessonSelect() {
                   icon={<Icon size={28} strokeWidth={2.5} />}
                   title={sign.name_ko}
                   desc={sign.name_en}
-                  status={isFirst && i === 0 ? 'current' : 'locked'}
+                  status="current"
                   stars={0}
                   index={i}
                   total={unit.signs.length}

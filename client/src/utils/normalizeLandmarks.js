@@ -36,13 +36,15 @@ export function normalizeLandmarks(landmarks) {
 export function normalizePoseLandmarks(poseLandmarks) {
   if (!poseLandmarks || poseLandmarks.length < 25) return null
 
-  const ls = poseLandmarks[11] // left shoulder
-  const rs = poseLandmarks[12] // right shoulder
-  const le = poseLandmarks[13] // left elbow
-  const re = poseLandmarks[14] // right elbow
-  const lw = poseLandmarks[15] // left wrist
-  const rw = poseLandmarks[16] // right wrist
-  const nose = poseLandmarks[0]
+  // Indices: 0=nose, 7/8=ears, 9/10=mouth, 11/12=shoulders,
+  //          13/14=elbows, 15/16=wrists, 17-22=hand tips, 23/24=hips
+  const points = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+  for (const idx of [11, 12]) {
+    if (!poseLandmarks[idx]) return null
+  }
+
+  const ls = poseLandmarks[11]
+  const rs = poseLandmarks[12]
 
   // Shoulder center as origin
   const cx = (ls.x + rs.x) / 2
@@ -55,14 +57,17 @@ export function normalizePoseLandmarks(poseLandmarks) {
   )
   if (shoulderWidth === 0) return null
 
-  const normalize = (p) => [
-    (p.x - cx) / shoulderWidth,
-    (p.y - cy) / shoulderWidth,
-    (p.z - cz) / shoulderWidth,
-  ]
+  const normalize = (p) => {
+    if (!p) return [0, 0, 0]
+    return [
+      (p.x - cx) / shoulderWidth,
+      (p.y - cy) / shoulderWidth,
+      ((p.z || 0) - cz) / shoulderWidth,
+    ]
+  }
 
-  // 7 key points: nose, left/right shoulder, elbow, wrist
-  const armLandmarks = [nose, ls, rs, le, re, lw, rw].map(normalize)
+  // 19 key points: face refs + shoulders + elbows + wrists + hand tips + hips
+  const armLandmarks = points.map(i => normalize(poseLandmarks[i]))
 
   // Hand position relative to body (useful for sign type detection)
   const handPosition = {
@@ -89,9 +94,9 @@ export function combineFeatures(handLandmarks, poseData) {
 
   return {
     handFeatures,   // 63 values (21 * 3)
-    poseFeatures,   // 21 values (7 * 3)
+    poseFeatures,   // 57 values (19 * 3)
     combined: handFeatures && poseFeatures
-      ? [...handFeatures, ...poseFeatures] // 84 values total
+      ? [...handFeatures, ...poseFeatures] // 120 values total
       : handFeatures || poseFeatures || [],
   }
 }

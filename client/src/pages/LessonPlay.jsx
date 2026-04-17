@@ -103,6 +103,7 @@ export default function LessonPlay() {
       setRecordProgress(Math.min(elapsed / RECORD_DURATION, 1))
 
       // Capture current frame's landmarks
+      try {
       const { hands, pose } = latestResultsRef.current
       let handData = null
       if (hands?.multiHandLandmarks?.length > 0) {
@@ -110,19 +111,25 @@ export default function LessonPlay() {
         handData = normalizeLandmarks(raw.map(p => ({ x: p.x, y: p.y, z: p.z })))
       }
       let poseData = null
-      if (pose?.poseLandmarks) {
-        poseData = normalizePoseLandmarks(pose.poseLandmarks)
+      try {
+        if (pose?.poseLandmarks) {
+          poseData = normalizePoseLandmarks(pose.poseLandmarks)
+        }
+      } catch (e) {
+        console.warn('[LessonPlay] Pose normalization failed:', e.message)
       }
       if (handData) {
-        // Build flat feature vector: hand(63) + pose(21) = 84
         const handFlat = handData.flat()
-        const poseFlat = poseData ? poseData.armLandmarks.flat() : Array(21).fill(0)
+        const poseFlat = poseData ? poseData.armLandmarks.flat() : Array(57).fill(0)
         framesRef.current.push({
           features: [...handFlat, ...poseFlat],
           hand: handData,
           pose: poseData,
           t: elapsed,
         })
+      }
+      } catch (e) {
+        console.warn('[LessonPlay] Frame capture error:', e.message)
       }
 
       if (elapsed >= RECORD_DURATION) {

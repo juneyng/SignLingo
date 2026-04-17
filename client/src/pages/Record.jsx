@@ -350,7 +350,7 @@ function UploadTab({ lang, result, setResult, setVideoFile, selectedSignId, cust
       if (handData) {
         frames.push({
           t: targetTime,
-          features: [...handData.flat(), ...(poseData ? poseData.armLandmarks.flat() : Array(21).fill(0))],
+          features: [...handData.flat(), ...(poseData ? poseData.armLandmarks.flat() : Array(57).fill(0))],
           hand: handData,
           pose: poseData?.armLandmarks || null,
           handPosition: poseData?.handPosition || null,
@@ -493,20 +493,29 @@ function WebcamTab({ lang, result, setResult, selectedSignId, customName, custom
       const elapsed = (Date.now() - startTime) / 1000
       setRecordProgress(Math.min(elapsed / RECORD_DURATION, 1))
 
-      const { hands, pose } = latestRef.current
-      let handData = null, poseData = null
-      if (hands?.multiHandLandmarks?.length > 0) {
-        handData = normalizeLandmarks(hands.multiHandLandmarks[0].map(p => ({x:p.x,y:p.y,z:p.z})))
-      }
-      if (pose?.poseLandmarks) poseData = normalizePoseLandmarks(pose.poseLandmarks)
+      try {
+        const { hands, pose } = latestRef.current
+        let handData = null, poseData = null
+        if (hands?.multiHandLandmarks?.length > 0) {
+          handData = normalizeLandmarks(hands.multiHandLandmarks[0].map(p => ({x:p.x,y:p.y,z:p.z})))
+        }
+        try {
+          if (pose?.poseLandmarks) poseData = normalizePoseLandmarks(pose.poseLandmarks)
+        } catch (e) {
+          console.warn('[Record] Pose normalization failed:', e.message)
+        }
 
-      if (handData) {
-        framesRef.current.push({
-          t: elapsed,
-          features: [...handData.flat(), ...(poseData ? poseData.armLandmarks.flat() : Array(21).fill(0))],
-          hand: handData, pose: poseData?.armLandmarks || null, handPosition: poseData?.handPosition || null,
-        })
-        setFrameCount(framesRef.current.length)
+        if (handData) {
+          const poseFlat = poseData ? poseData.armLandmarks.flat() : Array(57).fill(0)
+          framesRef.current.push({
+            t: elapsed,
+            features: [...handData.flat(), ...poseFlat],
+            hand: handData, pose: poseData?.armLandmarks || null, handPosition: poseData?.handPosition || null,
+          })
+          setFrameCount(framesRef.current.length)
+        }
+      } catch (e) {
+        console.warn('[Record] Frame capture error:', e.message)
       }
 
       if (elapsed >= RECORD_DURATION) {

@@ -176,7 +176,7 @@ export default function Analyze() {
       // Build feature vector
       if (handData) {
         const handFlat = handData.flat() // 63 values
-        const poseFlat = poseData ? poseData.armLandmarks.flat() : Array(21).fill(0) // 21 values
+        const poseFlat = poseData ? poseData.armLandmarks.flat() : Array(57).fill(0) // 21 values
         frames.push({
           t: time,
           features: [...handFlat, ...poseFlat],

@@ -3,26 +3,25 @@ import { getRecordedSign } from '@/services/signStorage'
 
 /**
  * Convert DTW distance to 0-100 score.
+ * Distance is normalized by sqrt(dims) to make scores comparable
+ * across different vector sizes (hand=63d, pose=21d).
  *
- * Observed distance ranges (84-dim vectors, normalized DTW):
- *   - Same sign, same person: 1.0 ~ 2.0
- *   - Same sign, different person: 2.0 ~ 4.0
- *   - Different sign: 4.0 ~ 8.0+
- *
- * Scoring: linear mapping within observed range.
+ * @param {number} distance - raw DTW distance
+ * @param {number} dims - number of dimensions in the feature vector
  */
-function dtwToScore(distance) {
-  // Calibrated thresholds based on real data
-  const PERFECT = 1.0  // distance below this → 100
-  const PASS = 3.5     // distance at this → ~80 (pass threshold)
-  const FAIL = 6.0     // distance above this → 0
+function dtwToScore(distance, dims = 84) {
+  // Normalize distance by sqrt(dims) so hand/pose are on the same scale
+  const normalized = distance / Math.sqrt(dims)
 
-  if (distance <= PERFECT) return 100
-  if (distance >= FAIL) return 0
+  // Thresholds (on normalized scale)
+  const PERFECT = 0.12  // normalized distance below this → 100
+  const FAIL = 0.8      // normalized distance above this → 0
 
-  // Linear interpolation between PERFECT and FAIL
-  const score = 100 * (1 - (distance - PERFECT) / (FAIL - PERFECT))
-  console.log(`[Score] distance=${distance.toFixed(3)} → score=${Math.round(score)}`)
+  if (normalized <= PERFECT) return 100
+  if (normalized >= FAIL) return 0
+
+  const score = 100 * (1 - (normalized - PERFECT) / (FAIL - PERFECT))
+  console.log(`[Score] raw=${distance.toFixed(3)}, dims=${dims}, norm=${normalized.toFixed(3)} → score=${Math.round(score)}`)
   return Math.round(Math.max(0, Math.min(100, score)))
 }
 
@@ -117,32 +116,33 @@ export function compareRecordedSign(userSequence, refSign) {
       refSeq = sequence.map(f => f.slice(0, minLen))
     }
 
-    // Separate DTW for hand (first 63 dims) and pose (dims 63-83)
+    // Separate DTW for hand (first 63 dims) and pose (dims 63+)
     const handDims = Math.min(63, userSeq[0].length)
+    const poseDims = Math.max(0, userSeq[0].length - 63)
+
     const userHand = userSeq.map(f => f.slice(0, handDims))
     const refHand = refSeq.map(f => f.slice(0, handDims))
     const handDtw = dtw(userHand, refHand)
-    const handScore = dtwToScore(handDtw.distance)
+    const handScore = dtwToScore(handDtw.distance, handDims)
 
-    let poseScore = -1 // -1 means no pose data
-    if (userSeq[0].length > 63 && refSeq[0].length > 63) {
+    let poseScore = -1
+    if (poseDims > 0) {
       const userPose = userSeq.map(f => f.slice(63))
       const refPose = refSeq.map(f => f.slice(63))
-      // Check if pose data is actually present (not all zeros)
       const hasRealPose = userPose.some(f => f.some(v => v !== 0)) && refPose.some(f => f.some(v => v !== 0))
       if (hasRealPose) {
         const poseDtw = dtw(userPose, refPose)
-        poseScore = dtwToScore(poseDtw.distance)
+        poseScore = dtwToScore(poseDtw.distance, poseDims)
       }
     }
 
-    // Weighted total: if no pose, hand is 100%
     const total = poseScore >= 0
       ? Math.round(handScore * 0.6 + poseScore * 0.4)
       : handScore
 
-    console.log(`[DTW] hand: dist=${handDtw.distance.toFixed(3)}→${handScore}%, pose: ${poseScore >= 0 ? poseScore + '%' : 'N/A'}, total: ${total}%`)
-    console.log(`[DTW] userFrames=${userSeq.length}, refFrames=${refSeq.length}, featureLen=${userSeq[0].length}`)
+    console.log(`[DTW] hand: dist=${handDtw.distance.toFixed(3)}, dims=${handDims} → ${handScore}%`)
+    console.log(`[DTW] pose: ${poseScore >= 0 ? `dist=${poseDims}d → ${poseScore}%` : 'N/A'}`)
+    console.log(`[DTW] total: ${total}%, frames: user=${userSeq.length}, ref=${refSeq.length}`)
 
     return {
       score: total,
