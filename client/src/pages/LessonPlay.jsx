@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, X, Check, Play, ChevronRight, ExternalLink, RotateCcw, Eye, Video, AlertCircle } from 'lucide-react'
+import { ArrowLeft, X, Check, Play, ChevronRight, ExternalLink, RotateCcw, Eye, Video, AlertCircle, Camera, Sun, Square, User } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, FeedbackCard, Badge } from '@/design-system/components'
 import { AccuracyGauge, HandMascot } from '@/design-system/icons'
@@ -393,6 +393,11 @@ export default function LessonPlay() {
             </div>
             </div>
 
+            {/* Camera setup tips — visible only before recording */}
+            {phase === PHASE.WATCH && (
+              <CameraTips lang={lang} />
+            )}
+
             {/* Action button based on phase */}
             <div className="mt-4">
               {phase === PHASE.WATCH && (
@@ -487,6 +492,67 @@ export default function LessonPlay() {
         />
       )}
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  )
+}
+
+function CameraTips({ lang }) {
+  const [open, setOpen] = useState(true)
+  const tips = lang === 'ko'
+    ? [
+        { icon: User,   text: '얼굴부터 허리 위까지가 화면에 모두 들어오게 카메라를 맞추세요.' },
+        { icon: Camera, text: '카메라는 가슴~눈 높이로, 정면을 향하게 두세요.' },
+        { icon: Sun,    text: '얼굴 정면에 조명이 오도록 — 창문이 등 뒤에 있으면 역광이 됩니다.' },
+        { icon: Square, text: '배경은 단색이거나 깔끔할수록 좋아요. 잡동사니·복잡한 무늬는 피하세요.' },
+      ]
+    : [
+        { icon: User,   text: 'Frame yourself from face to waist — both arms must be visible.' },
+        { icon: Camera, text: 'Position the camera at chest-to-eye height, facing you straight on.' },
+        { icon: Sun,    text: 'Light should come from in front. Avoid windows behind you (backlight).' },
+        { icon: Square, text: 'Use a clean, plain background. Avoid clutter or busy patterns.' },
+      ]
+
+  return (
+    <div
+      className="mt-3 rounded-xl overflow-hidden transition-all"
+      style={{ background: COLORS.blueBg, border: `2px solid ${COLORS.blue}30` }}
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-black/5 transition-colors"
+      >
+        <Camera size={14} color={COLORS.blue} strokeWidth={2.5} />
+        <span className="text-xs font-extrabold" style={{ color: COLORS.blue }}>
+          {lang === 'ko' ? '인식이 잘 되려면' : 'For better recognition'}
+        </span>
+        <ChevronRight
+          size={14}
+          color={COLORS.blue}
+          strokeWidth={2.5}
+          className="ml-auto transition-transform"
+          style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}
+        />
+      </button>
+      {open && (
+        <ul className="px-3 pb-2.5 space-y-1.5">
+          {tips.map((tip, i) => {
+            const Icon = tip.icon
+            return (
+              <li key={i} className="flex items-start gap-2">
+                <div
+                  className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: 'white', color: COLORS.blue }}
+                >
+                  <Icon size={12} strokeWidth={2.5} />
+                </div>
+                <span className="text-[11px] font-bold leading-snug" style={{ color: COLORS.gray700 }}>
+                  {tip.text}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

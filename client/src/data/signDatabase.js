@@ -67,7 +67,85 @@ function makeSign(id, name_ko, name_en, category, opts = {}) {
 }
 
 // ============================================================
-// UNIT 1: 인사 (Greetings) — 6 signs
+// UNIT 0: 한글 자모 / 지문자 (KSL Fingerspelling) — 29 signs
+// 자음 14개 + 모음 10개 + 겹받침 5개. 처음 수어를 접하는 사람을 위한 입문 단원.
+// ============================================================
+const consonantData = [
+  { id: 'ksl_g',  ko: 'ㄱ', en: 'Giyeok',       desc: 'Index + thumb form a corner shape',         desc_ko: '검지와 엄지로 ㄱ자 모양 만들기' },
+  { id: 'ksl_n',  ko: 'ㄴ', en: 'Nieun',        desc: 'Index extended horizontally',                desc_ko: '검지를 옆으로 펴기' },
+  { id: 'ksl_d',  ko: 'ㄷ', en: 'Digeut',       desc: 'Thumb + index + middle form ㄷ shape',       desc_ko: '엄지·검지·중지로 ㄷ모양' },
+  { id: 'ksl_r',  ko: 'ㄹ', en: 'Rieul',        desc: 'Bent fingers form zigzag like ㄹ',           desc_ko: '손가락을 구부려 ㄹ자 형태' },
+  { id: 'ksl_m',  ko: 'ㅁ', en: 'Mieum',        desc: 'Closed fist with all fingertips together',   desc_ko: '손가락 끝을 모아 사각형' },
+  { id: 'ksl_b',  ko: 'ㅂ', en: 'Bieup',        desc: 'Index + middle up, others folded',           desc_ko: '검지·중지를 펴고 나머지 접기' },
+  { id: 'ksl_s',  ko: 'ㅅ', en: 'Siot',         desc: 'Index + middle spread apart like legs',      desc_ko: '검지·중지를 V자로 벌리기' },
+  { id: 'ksl_ng', ko: 'ㅇ', en: 'Ieung',        desc: 'Thumb + index form a circle',                desc_ko: '엄지와 검지로 동그라미' },
+  { id: 'ksl_j',  ko: 'ㅈ', en: 'Jieut',        desc: 'Index + middle crossed forming X',           desc_ko: '검지·중지를 교차해 X자' },
+  { id: 'ksl_ch', ko: 'ㅊ', en: 'Chieut',       desc: 'ㅈ shape with thumb pointing up',             desc_ko: 'ㅈ 모양에 엄지를 위로' },
+  { id: 'ksl_k',  ko: 'ㅋ', en: 'Kieuk',        desc: 'ㄱ shape with extra finger extension',        desc_ko: 'ㄱ 모양에 손가락 하나 더' },
+  { id: 'ksl_t',  ko: 'ㅌ', en: 'Tieut',        desc: 'ㄷ shape with thumb across',                  desc_ko: 'ㄷ 모양에 엄지를 가로로' },
+  { id: 'ksl_p',  ko: 'ㅍ', en: 'Pieup',        desc: 'Index + middle + ring extended downward',    desc_ko: '검지·중지·약지를 아래로' },
+  { id: 'ksl_h',  ko: 'ㅎ', en: 'Hieut',        desc: 'ㅇ shape with index pointing up',             desc_ko: 'ㅇ 모양에 검지를 위로' },
+]
+
+const vowelData = [
+  { id: 'ksl_a',   ko: 'ㅏ', en: 'A',   desc: 'Index finger points to the right',                desc_ko: '검지를 오른쪽으로 가리키기' },
+  { id: 'ksl_ya',  ko: 'ㅑ', en: 'Ya',  desc: 'Index + middle point to the right',               desc_ko: '검지·중지를 오른쪽으로' },
+  { id: 'ksl_eo',  ko: 'ㅓ', en: 'Eo',  desc: 'Index finger points to the left',                 desc_ko: '검지를 왼쪽으로 가리키기' },
+  { id: 'ksl_yeo', ko: 'ㅕ', en: 'Yeo', desc: 'Index + middle point to the left',                desc_ko: '검지·중지를 왼쪽으로' },
+  { id: 'ksl_o',   ko: 'ㅗ', en: 'O',   desc: 'Index finger points upward',                      desc_ko: '검지를 위로 가리키기' },
+  { id: 'ksl_yo',  ko: 'ㅛ', en: 'Yo',  desc: 'Index + middle point upward',                     desc_ko: '검지·중지를 위로' },
+  { id: 'ksl_u',   ko: 'ㅜ', en: 'U',   desc: 'Index finger points downward',                    desc_ko: '검지를 아래로 가리키기' },
+  { id: 'ksl_yu',  ko: 'ㅠ', en: 'Yu',  desc: 'Index + middle point downward',                   desc_ko: '검지·중지를 아래로' },
+  { id: 'ksl_eu',  ko: 'ㅡ', en: 'Eu',  desc: 'Flat hand horizontal, palm down',                 desc_ko: '편 손을 수평으로, 손바닥은 아래' },
+  { id: 'ksl_i',   ko: 'ㅣ', en: 'I',   desc: 'Pinky finger extended upward',                    desc_ko: '새끼손가락을 위로 세우기' },
+]
+
+const doubleConsonantData = [
+  { id: 'ksl_lm', ko: 'ㄻ', en: 'Rieul-Mieum',  desc: 'ㄹ + ㅁ combined',                            desc_ko: 'ㄹ과 ㅁ을 연속으로' },
+  { id: 'ksl_lb', ko: 'ㄼ', en: 'Rieul-Bieup',  desc: 'ㄹ + ㅂ combined',                            desc_ko: 'ㄹ과 ㅂ을 연속으로' },
+  { id: 'ksl_bs', ko: 'ㅄ', en: 'Bieup-Siot',   desc: 'ㅂ + ㅅ combined',                            desc_ko: 'ㅂ과 ㅅ을 연속으로' },
+  { id: 'ksl_lh', ko: 'ㅀ', en: 'Rieul-Hieut',  desc: 'ㄹ + ㅎ combined',                            desc_ko: 'ㄹ과 ㅎ을 연속으로' },
+  { id: 'ksl_ls', ko: 'ㄽ', en: 'Rieul-Siot',   desc: 'ㄹ + ㅅ combined',                            desc_ko: 'ㄹ과 ㅅ을 연속으로' },
+]
+
+const unit0 = [
+  ...consonantData.map((c) =>
+    makeSign(c.id, c.ko, c.en, 'fingerspelling', {
+      type: 'static',
+      difficulty: 1,
+      landmarks: INDEX_UP,
+      description: c.desc,
+      description_ko: c.desc_ko,
+      tips: 'Hold the shape clearly for 1-2 seconds',
+      tips_ko: '모양을 1-2초간 명확하게 유지하세요',
+    })
+  ),
+  ...vowelData.map((v) =>
+    makeSign(v.id, v.ko, v.en, 'fingerspelling', {
+      type: 'static',
+      difficulty: 1,
+      landmarks: INDEX_UP,
+      description: v.desc,
+      description_ko: v.desc_ko,
+      tips: 'Hold the direction clearly for 1-2 seconds',
+      tips_ko: '방향을 1-2초간 명확하게 유지하세요',
+    })
+  ),
+  ...doubleConsonantData.map((c) =>
+    makeSign(c.id, c.ko, c.en, 'fingerspelling', {
+      type: 'dynamic',
+      difficulty: 2,
+      landmarks: INDEX_UP,
+      description: c.desc,
+      description_ko: c.desc_ko,
+      tips: 'Perform two consonant shapes in sequence',
+      tips_ko: '두 자음을 순서대로 표현하세요',
+    })
+  ),
+]
+
+// ============================================================
+// UNIT 1: 인사 (Greetings) — 4 signs
 // ============================================================
 const unit1 = [
   makeSign('hello', '안녕하세요', 'Hello', 'greetings', {
@@ -101,22 +179,6 @@ const unit1 = [
     description_ko: '양손을 펴서 앞에서 모으며 인사',
     tips: 'Both hands move toward each other',
     tips_ko: '양손을 앞에서 부드럽게 모으세요',
-  }),
-  makeSign('goodbye', '안녕히 가세요', 'Goodbye', 'greetings', {
-    type: 'dynamic', landmarks: OPEN_HAND, poseLandmarks: POSE_FRONT,
-    refHandPosition: { rightHandHeight: .4, leftHandHeight: -.5, rightHandForward: .2, leftHandForward: 0 },
-    description: 'Open hand wave side to side',
-    description_ko: '손을 펴서 좌우로 흔들며 인사',
-    tips: 'Wave from wrist, not whole arm',
-    tips_ko: '팔이 아니라 손목에서 흔드세요',
-  }),
-  makeSign('excuse', '실례합니다', 'Excuse Me', 'greetings', {
-    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_CHEST,
-    refHandPosition: { rightHandHeight: .5, leftHandHeight: -.3, rightHandForward: .15, leftHandForward: 0 },
-    description: 'Flat hand touches chin then extends forward',
-    description_ko: '편 손을 턱에 대고 앞으로 내밀기',
-    tips: 'Light touch on chin, then extend outward',
-    tips_ko: '턱을 가볍게 터치한 후 앞으로 내미세요',
   }),
 ]
 
@@ -420,6 +482,14 @@ const unit7 = [
 // ============================================================
 export const UNITS = [
   {
+    id: 'fingerspelling',
+    titleEn: 'Korean Fingerspelling',
+    titleKo: '한글 자모 (지문자)',
+    descEn: 'Learn KSL consonants — the foundation of fingerspelling',
+    descKo: '수어 입문의 기초, 자음 지문자 익히기',
+    signs: unit0,
+  },
+  {
     id: 'greetings',
     titleEn: 'Greetings',
     titleKo: '인사',
@@ -487,4 +557,4 @@ export function getSign(signId) {
   return ALL_SIGNS.find((s) => s.id === signId)
 }
 
-export const TOTAL_SIGNS = ALL_SIGNS.length // 44
+export const TOTAL_SIGNS = ALL_SIGNS.length
