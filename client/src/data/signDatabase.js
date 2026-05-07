@@ -401,7 +401,7 @@ const unit4 = [
 ]
 
 // ============================================================
-// UNIT 5: 숫자 (Numbers 1-10) — 10 signs
+// UNIT 5: 숫자 (Numbers) — 21 signs (1-12, 20, 30, ..., 100)
 // ============================================================
 const numLandmarks = (idx) => {
   // Numbers 1-5: extend that many fingers. 6-10: variations
@@ -417,29 +417,45 @@ const numLandmarks = (idx) => {
   return base
 }
 
-const unit5 = Array.from({ length: 10 }, (_, i) => {
-  const n = i + 1
-  const tips_map = {
-    1: { en: 'Extend index finger only', ko: '검지만 펴세요' },
-    2: { en: 'Index + middle finger', ko: '검지와 중지를 펴세요' },
-    3: { en: 'Index + middle + ring finger', ko: '검지, 중지, 약지를 펴세요' },
-    4: { en: 'Four fingers open, thumb tucked', ko: '네 손가락을 펴고 엄지는 접으세요' },
-    5: { en: 'All five fingers open', ko: '다섯 손가락 모두 펴세요' },
-    6: { en: 'Open hand, thumb touches pinky', ko: '손을 펴고 엄지와 새끼를 닿게' },
-    7: { en: 'Open hand, thumb touches ring finger', ko: '손을 펴고 엄지와 약지를 닿게' },
-    8: { en: 'Open hand, thumb touches middle finger', ko: '손을 펴고 엄지와 중지를 닿게' },
-    9: { en: 'Open hand, thumb touches index finger', ko: '손을 펴고 엄지와 검지를 닿게' },
-    10: { en: 'Fist with thumb up, twist wrist', ko: '주먹에서 엄지를 세우고 손목 비틀기' },
-  }
-  return makeSign(`num${n}`, `${n}`, `${n}`, 'numbers', {
-    difficulty: n <= 5 ? 1 : 2,
-    landmarks: numLandmarks(n),
+const numberData = [
+  // 1-10 (basic)
+  { n: 1,   tip_en: 'Extend index finger only',                      tip_ko: '검지만 펴세요' },
+  { n: 2,   tip_en: 'Index + middle finger',                         tip_ko: '검지와 중지를 펴세요' },
+  { n: 3,   tip_en: 'Index + middle + ring finger',                  tip_ko: '검지, 중지, 약지를 펴세요' },
+  { n: 4,   tip_en: 'Four fingers open, thumb tucked',               tip_ko: '네 손가락을 펴고 엄지는 접으세요' },
+  { n: 5,   tip_en: 'All five fingers open',                         tip_ko: '다섯 손가락 모두 펴세요' },
+  { n: 6,   tip_en: 'Open hand, thumb touches pinky',                tip_ko: '손을 펴고 엄지와 새끼를 닿게' },
+  { n: 7,   tip_en: 'Open hand, thumb touches ring finger',          tip_ko: '손을 펴고 엄지와 약지를 닿게' },
+  { n: 8,   tip_en: 'Open hand, thumb touches middle finger',        tip_ko: '손을 펴고 엄지와 중지를 닿게' },
+  { n: 9,   tip_en: 'Open hand, thumb touches index finger',         tip_ko: '손을 펴고 엄지와 검지를 닿게' },
+  { n: 10,  tip_en: 'Fist with thumb up, twist wrist',               tip_ko: '주먹에서 엄지를 세우고 손목 비틀기' },
+  // 11-12 (compound)
+  { n: 11,  tip_en: 'Sign 10, then 1 in sequence',                   tip_ko: '10을 표현한 후 1을 이어서 하세요',     dynamic: true, difficulty: 2 },
+  { n: 12,  tip_en: 'Sign 10, then 2 in sequence',                   tip_ko: '10을 표현한 후 2를 이어서 하세요',     dynamic: true, difficulty: 2 },
+  // Tens (20-90)
+  { n: 20,  tip_en: 'Two fingers extended with twist motion',        tip_ko: '두 손가락을 펴고 손목을 돌리세요',     dynamic: true, difficulty: 2 },
+  { n: 30,  tip_en: 'Three fingers extended with twist motion',      tip_ko: '세 손가락을 펴고 손목을 돌리세요',     dynamic: true, difficulty: 2 },
+  { n: 40,  tip_en: 'Four fingers extended with twist motion',       tip_ko: '네 손가락을 펴고 손목을 돌리세요',     dynamic: true, difficulty: 2 },
+  { n: 50,  tip_en: 'Five fingers extended with twist motion',       tip_ko: '다섯 손가락을 펴고 손목을 돌리세요',   dynamic: true, difficulty: 2 },
+  { n: 60,  tip_en: 'Sign 6 with downward twist',                    tip_ko: '6을 만들고 아래로 비틀기',             dynamic: true, difficulty: 2 },
+  { n: 70,  tip_en: 'Sign 7 with downward twist',                    tip_ko: '7을 만들고 아래로 비틀기',             dynamic: true, difficulty: 2 },
+  { n: 80,  tip_en: 'Sign 8 with downward twist',                    tip_ko: '8을 만들고 아래로 비틀기',             dynamic: true, difficulty: 2 },
+  { n: 90,  tip_en: 'Sign 9 with downward twist',                    tip_ko: '9를 만들고 아래로 비틀기',             dynamic: true, difficulty: 2 },
+  // 100
+  { n: 100, tip_en: 'Closed fist tapped twice — represents "百"',     tip_ko: '주먹을 두 번 두드려 "백"을 표현',      dynamic: true, difficulty: 3 },
+]
+
+const unit5 = numberData.map(({ n, tip_en, tip_ko, dynamic, difficulty }) =>
+  makeSign(`num${n}`, `${n}`, `${n}`, 'numbers', {
+    type: dynamic ? 'dynamic' : 'static',
+    difficulty: difficulty || (n <= 5 ? 1 : 2),
+    landmarks: numLandmarks(Math.min(n, 10)),
     description: `Number ${n} in KSL`,
     description_ko: `숫자 ${n}`,
-    tips: tips_map[n]?.en || '',
-    tips_ko: tips_map[n]?.ko || '',
+    tips: tip_en,
+    tips_ko: tip_ko,
   })
-})
+)
 
 // ============================================================
 // UNIT 6: 가족 (Family) — 7 signs
@@ -632,10 +648,10 @@ export const UNITS = [
   },
   {
     id: 'numbers',
-    titleEn: 'Numbers 1-10',
-    titleKo: '숫자 1-10',
-    descEn: 'Count in KSL',
-    descKo: '수어로 숫자 세기',
+    titleEn: 'Numbers 1-100',
+    titleKo: '숫자 1-100',
+    descEn: 'Count in KSL — 1 through 100',
+    descKo: '수어로 숫자 세기 (1부터 100까지)',
     signs: unit5,
   },
   {
