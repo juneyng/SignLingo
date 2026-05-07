@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, HandMetal, Users, Smile, Hash, Heart, Home as HomeIcon, Play, BookA } from 'lucide-react'
+import { ChevronRight, HandMetal, Users, Smile, Hash, Heart, Home as HomeIcon, Play, BookA, MessageCircle } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Card3D, ProgressBar, ProgressRing, Badge } from '@/design-system/components'
 import { UNITS, TOTAL_SIGNS } from '@/data/signDatabase'
@@ -14,11 +14,12 @@ const UNIT_ICONS = {
   numbers: Hash,
   family: Users,
   daily: HandMetal,
+  etc: MessageCircle,
 }
 
 const UNIT_COLORS = [
   COLORS.purple, COLORS.green, COLORS.blue, COLORS.orange,
-  COLORS.yellow, COLORS.red, COLORS.green, COLORS.blue,
+  COLORS.yellow, COLORS.red, COLORS.green, COLORS.blue, COLORS.purple,
 ]
 
 export default function LessonSelect() {

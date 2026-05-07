@@ -145,7 +145,7 @@ const unit0 = [
 ]
 
 // ============================================================
-// UNIT 1: 인사 (Greetings) — 4 signs
+// UNIT 1: 인사 (Greetings) — 6 signs
 // ============================================================
 const unit1 = [
   makeSign('hello', '안녕하세요', 'Hello', 'greetings', {
@@ -179,6 +179,22 @@ const unit1 = [
     description_ko: '양손을 펴서 앞에서 모으며 인사',
     tips: 'Both hands move toward each other',
     tips_ko: '양손을 앞에서 부드럽게 모으세요',
+  }),
+  makeSign('please_takecare', '잘 부탁드립니다', 'Please Take Care of Me', 'greetings', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_FRONT,
+    refHandPosition: { rightHandHeight: .1, leftHandHeight: .1, rightHandForward: .25, leftHandForward: .25 },
+    description: 'Both hands together in front, slight bow forward',
+    description_ko: '양손을 모아 앞으로 내밀고 가볍게 숙이기',
+    tips: 'Hands form a respectful gesture together',
+    tips_ko: '두 손을 정중하게 모으세요',
+  }),
+  makeSign('eaten_yet', '식사 하셨어요?', 'Have You Eaten?', 'greetings', {
+    type: 'dynamic', difficulty: 2, landmarks: FIST, poseLandmarks: POSE_HIGH,
+    refHandPosition: { rightHandHeight: .6, leftHandHeight: -.3, rightHandForward: .1, leftHandForward: 0 },
+    description: 'Bring fingertips to mouth, then tilt head questioningly',
+    description_ko: '손끝을 입으로 가져간 후 고개를 갸웃 (질문 표정)',
+    tips: 'Eating motion + questioning facial expression',
+    tips_ko: '먹는 동작 후 의문의 표정을 지으세요',
   }),
 ]
 
@@ -237,7 +253,7 @@ const unit2 = [
 ]
 
 // ============================================================
-// UNIT 3: 자기소개 (Self Introduction) — 6 signs
+// UNIT 3: 자기소개 (Self Introduction) — 7 signs
 // ============================================================
 const unit3 = [
   makeSign('me', '나/저', 'I / Me', 'intro', {
@@ -288,10 +304,18 @@ const unit3 = [
     tips: 'Interlock curved index fingers',
     tips_ko: '구부린 검지를 서로 걸어주세요',
   }),
+  makeSign('age', '나이', 'Age', 'intro', {
+    type: 'dynamic', difficulty: 2, landmarks: INDEX_UP, poseLandmarks: POSE_HIGH,
+    refHandPosition: { rightHandHeight: .5, leftHandHeight: -.3, rightHandForward: .1, leftHandForward: 0 },
+    description: 'Index finger near temple, slight twist',
+    description_ko: '검지를 관자놀이 옆에 두고 살짝 돌리기',
+    tips: 'Used in questions like "How old are you?"',
+    tips_ko: '"몇 살이에요?" 질문에 사용됩니다',
+  }),
 ]
 
 // ============================================================
-// UNIT 4: 감정 (Emotions) — 6 signs
+// UNIT 4: 감정 (Emotions) — 10 signs
 // ============================================================
 const unit4 = [
   makeSign('good', '좋아요', 'Good / Like', 'emotions', {
@@ -342,6 +366,38 @@ const unit4 = [
     tips: 'Hands start on upper chest, drop as body droops',
     tips_ko: '가슴 위에서 힘없이 아래로 떨어뜨리세요',
   }),
+  makeSign('fear', '두려워하다', 'Fear', 'emotions', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_CHEST,
+    refHandPosition: { rightHandHeight: .3, leftHandHeight: .3, rightHandForward: .15, leftHandForward: .15 },
+    description: 'Both hands tremble in front of chest',
+    description_ko: '양손을 가슴 앞에서 떨듯이 흔들기',
+    tips: 'Slight trembling motion shows fear',
+    tips_ko: '떨리는 동작으로 두려움을 표현하세요',
+  }),
+  makeSign('surprise', '놀라다', 'Surprise', 'emotions', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_HIGH,
+    refHandPosition: { rightHandHeight: .7, leftHandHeight: .7, rightHandForward: .15, leftHandForward: .15 },
+    description: 'Both hands open suddenly near face',
+    description_ko: '양손을 얼굴 옆에서 갑자기 펴기',
+    tips: 'Sharp opening motion + wide eyes',
+    tips_ko: '갑작스럽게 손을 펴고 눈을 크게 뜨세요',
+  }),
+  makeSign('love', '사랑하다', 'Love', 'emotions', {
+    type: 'dynamic', difficulty: 2, landmarks: FIST, poseLandmarks: POSE_CHEST,
+    refHandPosition: { rightHandHeight: .3, leftHandHeight: .3, rightHandForward: .05, leftHandForward: .05 },
+    description: 'Crossed fists pressed to chest',
+    description_ko: '주먹을 교차하여 가슴에 대기',
+    tips: 'Both arms cross over heart',
+    tips_ko: '양팔을 가슴 위에서 교차하세요',
+  }),
+  makeSign('relief', '안도하다', 'Relief', 'emotions', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_CHEST,
+    refHandPosition: { rightHandHeight: .4, leftHandHeight: -.3, rightHandForward: .1, leftHandForward: 0 },
+    description: 'Open hand pats chest with exhaling motion',
+    description_ko: '편 손으로 가슴을 쓸어내리며 한숨 돌리기',
+    tips: 'Slow downward stroke with relaxed expression',
+    tips_ko: '편안한 표정으로 가슴을 천천히 쓸어내리세요',
+  }),
 ]
 
 // ============================================================
@@ -386,7 +442,7 @@ const unit5 = Array.from({ length: 10 }, (_, i) => {
 })
 
 // ============================================================
-// UNIT 6: 가족 (Family) — 5 signs
+// UNIT 6: 가족 (Family) — 7 signs
 // ============================================================
 const unit6 = [
   makeSign('family', '가족', 'Family', 'family', {
@@ -428,6 +484,22 @@ const unit6 = [
     description_ko: '편 손을 머리 위에서 아치형으로',
     tips: 'Arc hand from front of head to back',
     tips_ko: '머리 앞에서 뒤로 아치를 그리세요',
+  }),
+  makeSign('older_sister', '언니/누나', 'Older Sister', 'family', {
+    type: 'dynamic', difficulty: 2, landmarks: INDEX_UP, poseLandmarks: POSE_CHEST,
+    refHandPosition: { rightHandHeight: .4, leftHandHeight: -.3, rightHandForward: .1, leftHandForward: 0 },
+    description: 'Index finger near chin, then point upward',
+    description_ko: '검지를 턱 근처에 두고 위로 가리키기',
+    tips: 'Female reference + "older" upward motion',
+    tips_ko: '여성을 가리킨 후 위쪽 방향으로 움직이세요',
+  }),
+  makeSign('older_brother', '오빠/형', 'Older Brother', 'family', {
+    type: 'dynamic', difficulty: 2, landmarks: INDEX_UP, poseLandmarks: POSE_HIGH,
+    refHandPosition: { rightHandHeight: .6, leftHandHeight: -.3, rightHandForward: .1, leftHandForward: 0 },
+    description: 'Index finger near forehead, then point upward',
+    description_ko: '검지를 이마 근처에 두고 위로 가리키기',
+    tips: 'Male reference + "older" upward motion',
+    tips_ko: '남성을 가리킨 후 위쪽 방향으로 움직이세요',
   }),
 ]
 
@@ -476,6 +548,43 @@ const unit7 = [
     tips_ko: '주먹을 번갈아 앞뒤로 움직이세요',
   }),
 ]
+
+// ============================================================
+// UNIT 8: 기타 / 시나리오 (Etc / Scenarios) — 7 signs
+// 게임/대화 모드용 시나리오 표현. 일부는 다른 단원에서 참조.
+// ============================================================
+const findSign = (id) => [...unit1, ...unit2, ...unit3, ...unit4, ...unit6, ...unit7].find(s => s.id === id)
+
+const unit8 = [
+  findSign('nicetomeet'),                      // 1. 만나서 반갑습니다 (alias from Unit 1)
+  makeSign('age_twenty', '20살입니다', "I'm 20 Years Old", 'etc', {
+    type: 'dynamic', difficulty: 2, landmarks: INDEX_UP, poseLandmarks: POSE_FRONT,
+    refHandPosition: { rightHandHeight: .2, leftHandHeight: -.3, rightHandForward: .15, leftHandForward: 0 },
+    description: 'Sign "20" + "age" combined',
+    description_ko: '"20" 수어와 "나이"를 연결해서 표현',
+    tips: 'Number 20 first, then the age sign',
+    tips_ko: '숫자 20을 먼저 표현하고 나이 수어를 이어서 하세요',
+  }),
+  findSign('help'),                            // 3. 도와주세요 (alias from Unit 2)
+  findSign('sorry'),                           // 4. 죄송합니다 (alias from Unit 1)
+  makeSign('bathroom_where', '화장실이 어딘가요?', 'Where Is the Bathroom?', 'etc', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_FRONT,
+    refHandPosition: { rightHandHeight: .2, leftHandHeight: .1, rightHandForward: .25, leftHandForward: .15 },
+    description: 'Sign "bathroom", then point with questioning expression',
+    description_ko: '"화장실" 수어 후 손바닥을 펴 묻는 표정',
+    tips: 'Bathroom sign + raised eyebrows for question',
+    tips_ko: '화장실 수어 후 의문 표정을 지으세요',
+  }),
+  makeSign('feeling_today', '오늘 기분 어때?', 'How Do You Feel Today?', 'etc', {
+    type: 'dynamic', difficulty: 2, landmarks: OPEN_HAND, poseLandmarks: POSE_FRONT,
+    refHandPosition: { rightHandHeight: .3, leftHandHeight: -.3, rightHandForward: .2, leftHandForward: 0 },
+    description: 'Sign "today" + "feeling", end with questioning gesture',
+    description_ko: '"오늘"과 "기분" 수어를 이어서 하고 묻는 동작으로 마무리',
+    tips: 'Today + feeling + question expression',
+    tips_ko: '오늘 + 기분 수어 후 묻는 표정으로 마무리하세요',
+  }),
+  findSign('eaten_yet'),                       // 7. 식사 하셨어요? (alias from Unit 1)
+].filter(Boolean)
 
 // ============================================================
 // EXPORTS
@@ -545,9 +654,31 @@ export const UNITS = [
     descKo: '일상 동작 표현',
     signs: unit7,
   },
+  {
+    id: 'etc',
+    titleEn: 'Scenarios',
+    titleKo: '기타 (상황별 표현)',
+    descEn: 'Practical phrases for everyday situations',
+    descKo: '실생활 상황별 표현 모음',
+    signs: unit8,
+  },
 ]
 
-export const ALL_SIGNS = UNITS.flatMap((u) => u.signs)
+// Dedupe: same sign object can appear in multiple units (alias).
+// ALL_SIGNS keeps unique by id so getSign() and TOTAL_SIGNS reflect distinct signs.
+export const ALL_SIGNS = (() => {
+  const seen = new Set()
+  const result = []
+  for (const u of UNITS) {
+    for (const s of u.signs) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id)
+        result.push(s)
+      }
+    }
+  }
+  return result
+})()
 
 export function getUnit(unitId) {
   return UNITS.find((u) => u.id === unitId) || UNITS[0]
