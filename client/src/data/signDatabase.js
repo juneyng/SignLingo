@@ -67,8 +67,9 @@ function makeSign(id, name_ko, name_en, category, opts = {}) {
 }
 
 // ============================================================
-// UNIT 0: 한글 자모 / 지문자 (KSL Fingerspelling) — 29 signs
-// 자음 14개 + 모음 10개 + 겹받침 5개. 처음 수어를 접하는 사람을 위한 입문 단원.
+// UNIT 0: 한글 자모 / 지문자 (KSL Fingerspelling) — 40 signs
+// 자음 14개 + 모음 10개 + 이중모음 11개 + 쌍자음 5개.
+// 처음 수어를 접하는 사람을 위한 입문 단원.
 // ============================================================
 const consonantData = [
   { id: 'ksl_g',  ko: 'ㄱ', en: 'Giyeok',       desc: 'Index + thumb form a corner shape',         desc_ko: '검지와 엄지로 ㄱ자 모양 만들기' },
@@ -100,12 +101,28 @@ const vowelData = [
   { id: 'ksl_i',   ko: 'ㅣ', en: 'I',   desc: 'Pinky finger extended upward',                    desc_ko: '새끼손가락을 위로 세우기' },
 ]
 
-const doubleConsonantData = [
-  { id: 'ksl_lm', ko: 'ㄻ', en: 'Rieul-Mieum',  desc: 'ㄹ + ㅁ combined',                            desc_ko: 'ㄹ과 ㅁ을 연속으로' },
-  { id: 'ksl_lb', ko: 'ㄼ', en: 'Rieul-Bieup',  desc: 'ㄹ + ㅂ combined',                            desc_ko: 'ㄹ과 ㅂ을 연속으로' },
-  { id: 'ksl_bs', ko: 'ㅄ', en: 'Bieup-Siot',   desc: 'ㅂ + ㅅ combined',                            desc_ko: 'ㅂ과 ㅅ을 연속으로' },
-  { id: 'ksl_lh', ko: 'ㅀ', en: 'Rieul-Hieut',  desc: 'ㄹ + ㅎ combined',                            desc_ko: 'ㄹ과 ㅎ을 연속으로' },
-  { id: 'ksl_ls', ko: 'ㄽ', en: 'Rieul-Siot',   desc: 'ㄹ + ㅅ combined',                            desc_ko: 'ㄹ과 ㅅ을 연속으로' },
+const diphthongData = [
+  { id: 'ksl_ae',  ko: 'ㅐ', en: 'Ae',  desc: 'ㅏ + ㅣ combined — sweep right then up',            desc_ko: 'ㅏ와 ㅣ를 연결 — 오른쪽 후 위로' },
+  { id: 'ksl_yae', ko: 'ㅒ', en: 'Yae', desc: 'ㅑ + ㅣ combined',                                   desc_ko: 'ㅑ와 ㅣ를 연결' },
+  { id: 'ksl_e',   ko: 'ㅔ', en: 'E',   desc: 'ㅓ + ㅣ combined — sweep left then up',             desc_ko: 'ㅓ와 ㅣ를 연결 — 왼쪽 후 위로' },
+  { id: 'ksl_ye',  ko: 'ㅖ', en: 'Ye',  desc: 'ㅕ + ㅣ combined',                                   desc_ko: 'ㅕ와 ㅣ를 연결' },
+  { id: 'ksl_wa',  ko: 'ㅘ', en: 'Wa',  desc: 'ㅗ + ㅏ combined — up then right',                   desc_ko: 'ㅗ와 ㅏ를 연결 — 위 후 오른쪽' },
+  { id: 'ksl_wae', ko: 'ㅙ', en: 'Wae', desc: 'ㅗ + ㅐ combined',                                   desc_ko: 'ㅗ와 ㅐ를 연결' },
+  { id: 'ksl_oe',  ko: 'ㅚ', en: 'Oe',  desc: 'ㅗ + ㅣ combined — up then up-stroke',               desc_ko: 'ㅗ와 ㅣ를 연결' },
+  { id: 'ksl_wo',  ko: 'ㅝ', en: 'Wo',  desc: 'ㅜ + ㅓ combined — down then left',                  desc_ko: 'ㅜ와 ㅓ를 연결 — 아래 후 왼쪽' },
+  { id: 'ksl_we',  ko: 'ㅞ', en: 'We',  desc: 'ㅜ + ㅔ combined',                                   desc_ko: 'ㅜ와 ㅔ를 연결' },
+  { id: 'ksl_wi',  ko: 'ㅟ', en: 'Wi',  desc: 'ㅜ + ㅣ combined — down then up-stroke',             desc_ko: 'ㅜ와 ㅣ를 연결' },
+  { id: 'ksl_ui',  ko: 'ㅢ', en: 'Ui',  desc: 'ㅡ + ㅣ combined — flat then up-stroke',             desc_ko: 'ㅡ와 ㅣ를 연결 — 수평 후 위로' },
+]
+
+// NOTE: ids preserved (ksl_lm/lb/bs/lh/ls) to keep existing video recordings
+// mapped correctly. Display labels updated to ssang-consonants per recordings.
+const ssangConsonantData = [
+  { id: 'ksl_lm', ko: 'ㄲ', en: 'Ssang-giyeok', desc: 'Repeat the ㄱ shape twice quickly',          desc_ko: 'ㄱ 모양을 빠르게 두 번 반복' },
+  { id: 'ksl_lb', ko: 'ㄸ', en: 'Ssang-digeut', desc: 'Repeat the ㄷ shape twice quickly',          desc_ko: 'ㄷ 모양을 빠르게 두 번 반복' },
+  { id: 'ksl_bs', ko: 'ㅃ', en: 'Ssang-bieup',  desc: 'Repeat the ㅂ shape twice quickly',          desc_ko: 'ㅂ 모양을 빠르게 두 번 반복' },
+  { id: 'ksl_lh', ko: 'ㅆ', en: 'Ssang-siot',   desc: 'Repeat the ㅅ shape twice quickly',          desc_ko: 'ㅅ 모양을 빠르게 두 번 반복' },
+  { id: 'ksl_ls', ko: 'ㅉ', en: 'Ssang-jieut',  desc: 'Repeat the ㅈ shape twice quickly',          desc_ko: 'ㅈ 모양을 빠르게 두 번 반복' },
 ]
 
 const unit0 = [
@@ -131,15 +148,26 @@ const unit0 = [
       tips_ko: '방향을 1-2초간 명확하게 유지하세요',
     })
   ),
-  ...doubleConsonantData.map((c) =>
+  ...diphthongData.map((d) =>
+    makeSign(d.id, d.ko, d.en, 'fingerspelling', {
+      type: 'dynamic',
+      difficulty: 2,
+      landmarks: INDEX_UP,
+      description: d.desc,
+      description_ko: d.desc_ko,
+      tips: 'Combine two vowel directions smoothly',
+      tips_ko: '두 모음 방향을 자연스럽게 연결하세요',
+    })
+  ),
+  ...ssangConsonantData.map((c) =>
     makeSign(c.id, c.ko, c.en, 'fingerspelling', {
       type: 'dynamic',
       difficulty: 2,
       landmarks: INDEX_UP,
       description: c.desc,
       description_ko: c.desc_ko,
-      tips: 'Perform two consonant shapes in sequence',
-      tips_ko: '두 자음을 순서대로 표현하세요',
+      tips: 'Repeat the consonant shape twice with sharp emphasis',
+      tips_ko: '같은 자음 모양을 강하게 두 번 반복하세요',
     })
   ),
 ]
