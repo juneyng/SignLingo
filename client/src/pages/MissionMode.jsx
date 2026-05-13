@@ -55,17 +55,23 @@ export default function MissionMode() {
       <div>
         <h3 className="font-extrabold text-sm mb-3" style={{ color: COLORS.gray800 }}>{t.quickChallenge}</h3>
         <div className="grid grid-cols-3 gap-3">
-          <AccentCard color={COLORS.green} darkColor={COLORS.greenDark} onClick={() => navigate('/lessons/consonants1')}>
+          <AccentCard color={COLORS.orange} darkColor={COLORS.orangeDark} onClick={() => navigate('/missions/fingerspelling')}>
             <Zap size={22} color="white" strokeWidth={2.5} />
-            <p className="text-white font-extrabold text-xs mt-2">{t.speedRound}</p>
+            <p className="text-white font-extrabold text-xs mt-2">
+              {lang === 'ko' ? '지문자 10초' : 'Fingerspell 10s'}
+            </p>
           </AccentCard>
-          <AccentCard color={COLORS.blue} darkColor={COLORS.blueDark} onClick={() => navigate('/lessons/consonants1')}>
+          <AccentCard color={COLORS.blue} darkColor={COLORS.blueDark} onClick={() => navigate('/lessons/fingerspelling')}>
             <Target size={22} color="white" strokeWidth={2.5} />
-            <p className="text-white font-extrabold text-xs mt-2">{t.accuracy}</p>
+            <p className="text-white font-extrabold text-xs mt-2">
+              {lang === 'ko' ? '자모 연습' : 'Fingerspell drill'}
+            </p>
           </AccentCard>
-          <AccentCard color={COLORS.purple} darkColor={COLORS.purpleDark} onClick={() => navigate('/lessons/consonants1')}>
+          <AccentCard color={COLORS.purple} darkColor={COLORS.purpleDark} onClick={() => navigate('/lessons')}>
             <BookOpen size={22} color="white" strokeWidth={2.5} />
-            <p className="text-white font-extrabold text-xs mt-2">{t.signQuiz}</p>
+            <p className="text-white font-extrabold text-xs mt-2">
+              {lang === 'ko' ? '레슨 둘러보기' : 'Browse lessons'}
+            </p>
           </AccentCard>
         </div>
       </div>
