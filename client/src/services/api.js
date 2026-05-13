@@ -67,9 +67,65 @@ export async function fetchLeaderboard() {
   if (!isSupabaseConfigured) return []
   const { data, error } = await supabase
     .from('user_progress')
-    .select('user_id, total_points, streak, profiles(display_name)')
-    .order('total_points', { ascending: false })
+    .select('user_id, total_points, xp, streak, profiles(display_name)')
+    .order('xp', { ascending: false })
     .limit(20)
+  if (error) throw error
+  return data
+}
+
+// ============================================================
+// Gamification — XP / Stars / Hearts / Streak
+// ============================================================
+
+export async function ensureProgressRow(userId) {
+  if (!isSupabaseConfigured) return
+  const { error } = await supabase.rpc('ensure_progress_row', { p_user_id: userId })
+  if (error) throw error
+}
+
+export async function touchStreak(userId) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('touch_streak', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+export async function refillHearts(userId) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('refill_hearts', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+export async function consumeHeart(userId) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('consume_heart', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+/**
+ * Add XP. Returns { granted, row } — granted may be less than requested
+ * if the daily 800 cap was hit (50% reduction past cap).
+ */
+export async function addXp(userId, amount) {
+  if (!isSupabaseConfigured) return { granted: 0, row: null }
+  const { data, error } = await supabase.rpc('add_xp', {
+    p_user_id: userId,
+    p_amount: amount,
+  })
+  if (error) throw error
+  const first = Array.isArray(data) ? data[0] : data
+  return { granted: first?.granted ?? 0, row: first?.progress ?? null }
+}
+
+export async function addStars(userId, amount) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('add_stars', {
+    p_user_id: userId,
+    p_amount: amount,
+  })
   if (error) throw error
   return data
 }
