@@ -11,6 +11,9 @@ import { generateFeedback, generatePoseFeedback } from '@/utils/feedbackGenerato
 import { getUnit } from '@/data/signDatabase'
 import { getSignVideo, getRecordedSign, preloadRecordedSigns } from '@/services/signStorage'
 import useLanguage from '@/stores/useLanguage'
+import useCombo, { comboMultiplier } from '@/stores/useCombo'
+import useProgress from '@/hooks/useProgress'
+import ComboDisplay from '@/components/common/ComboDisplay'
 
 const RECORD_DURATION = 6 // seconds
 
@@ -42,6 +45,13 @@ export default function LessonPlay() {
   const [showComplete, setShowComplete] = useState(false)
   const [hasRealData, setHasRealData] = useState(false)
   const [localVideoUrl, setLocalVideoUrl] = useState(null)
+  const [reward, setReward] = useState(null) // { xp, stars, combo, multiplier }
+
+  // Gamification
+  const comboCount = useCombo((s) => s.combo)
+  const comboIncrement = useCombo((s) => s.increment)
+  const comboBreak = useCombo((s) => s.break)
+  const { addXp, addStars } = useProgress()
 
   // Recording buffer
   const framesRef = useRef([])
@@ -180,6 +190,28 @@ export default function LessonPlay() {
       setFeedback(lang === 'ko' ? '훌륭해요! 수어가 정확합니다!' : 'Excellent! Sign is correct!')
       setFeedbackType('success')
       setCompletedSigns(prev => new Set(prev).add(currentIndex))
+
+      // Gamification — reward
+      comboIncrement()
+      const nextCombo = comboCount + 1
+      const multiplier = comboMultiplier(nextCombo)
+      const baseXp = 30
+      const xpAmount = Math.round(baseXp * multiplier)
+      const starAmount = nextCombo >= 20 ? Math.max(1, Math.floor(nextCombo / 5)) : 0
+      ;(async () => {
+        try {
+          const xpResult = await addXp(xpAmount)
+          if (starAmount > 0) await addStars(starAmount)
+          setReward({
+            xp: xpResult?.granted ?? xpAmount,
+            stars: starAmount,
+            combo: nextCombo,
+            multiplier,
+          })
+        } catch (e) {
+          console.warn('[LessonPlay] reward grant failed:', e.message)
+        }
+      })()
     } else if (!result.hasSequence) {
       // No real reference data — warn user
       setFeedback(lang === 'ko'
@@ -201,6 +233,12 @@ export default function LessonPlay() {
       }
       setFeedback(msgs.join(' ') || (lang === 'ko' ? '영상을 보고 다시 시도해보세요.' : 'Watch the reference and try again.'))
       setFeedbackType(result.score >= 50 ? 'hint' : 'error')
+
+      // Gamification — guided lesson is a "safe practice" zone:
+      // break combo, but do NOT consume hearts (per design doc).
+      // Hearts are reserved for timed challenges.
+      if (result.hasSequence) comboBreak()
+      setReward(null)
     }
 
     setPhase(PHASE.RESULT)
@@ -232,7 +270,7 @@ export default function LessonPlay() {
 
   const goToSign = (i) => {
     setCurrentIndex(i); setPhase(PHASE.WATCH); setScore(0); setHandScore(0); setPoseScore(0)
-    setFeedback(''); setFeedbackType('hint'); setRecordProgress(0)
+    setFeedback(''); setFeedbackType('hint'); setRecordProgress(0); setReward(null)
   }
   const nextSign = () => {
     currentIndex < signs.length - 1 ? goToSign(currentIndex + 1) : setShowComplete(true)
@@ -357,6 +395,9 @@ export default function LessonPlay() {
               <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
               <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
 
+              {/* Combo overlay — hidden during recording/analyzing to reduce noise */}
+              {(phase === PHASE.WATCH || phase === PHASE.RESULT) && <ComboDisplay position="top-right" />}
+
               {/* Phase overlays */}
               {phase === PHASE.COUNTDOWN && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -448,6 +489,9 @@ export default function LessonPlay() {
                     </div>
                   )}
                   <FeedbackCard type={feedbackType} message={feedback} />
+                  {reward && (
+                    <RewardBanner reward={reward} lang={lang} />
+                  )}
                   <div className="flex gap-2">
                     <ButtonOutline color={COLORS.gray400} size="sm"
                       icon={<RotateCcw size={14} />}
@@ -492,6 +536,41 @@ export default function LessonPlay() {
         />
       )}
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+    </div>
+  )
+}
+
+function RewardBanner({ reward, lang }) {
+  return (
+    <div
+      className="rounded-xl px-3 py-2 flex items-center gap-3 animate-[rewardIn_400ms_ease-out]"
+      style={{
+        background: `linear-gradient(135deg, ${COLORS.greenLight}, ${COLORS.yellow}30)`,
+        border: `2px solid ${COLORS.green}40`,
+      }}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="text-xl">⚡</span>
+        <span className="text-sm font-black" style={{ color: COLORS.green }}>+{reward.xp} XP</span>
+      </div>
+      {reward.stars > 0 && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xl">⭐</span>
+          <span className="text-sm font-black" style={{ color: COLORS.yellow }}>+{reward.stars}</span>
+        </div>
+      )}
+      {reward.multiplier > 1 && (
+        <span className="ml-auto text-xs font-black px-2 py-0.5 rounded-full"
+          style={{ background: COLORS.purple, color: 'white' }}>
+          ×{reward.multiplier} {lang === 'ko' ? '콤보' : 'combo'}
+        </span>
+      )}
+      <style>{`
+        @keyframes rewardIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   )
 }

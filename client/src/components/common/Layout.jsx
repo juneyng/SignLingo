@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Home, BookOpen, Target, BarChart3, Settings, Star, PanelRightClose, PanelRightOpen, Video, HelpCircle } from 'lucide-react'
+import { Home, BookOpen, Target, BarChart3, Settings, Star, Heart, PanelRightClose, PanelRightOpen, Video, HelpCircle } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { SidebarItem, MissionCard, LeaderboardRow } from '@/design-system/components'
 import { FlameSVG } from '@/design-system/icons'
 import useAuth from '@/hooks/useAuth'
+import useProgress from '@/hooks/useProgress'
 import { signOut } from '@/services/auth'
 import useLanguage from '@/stores/useLanguage'
 import OnboardingTour from './OnboardingTour'
@@ -14,6 +15,7 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { row: progress, level } = useProgress()
   const { t, lang, toggle } = useLanguage()
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
 
@@ -56,7 +58,7 @@ export default function Layout() {
             </div>
           )
         })}
-        <div className="mt-auto flex flex-col gap-1">
+        <div className="mt-auto flex flex-col gap-1 items-center">
           <SidebarItem
             icon={HelpCircle}
             label={lang === 'ko' ? '가이드' : 'Help'}
@@ -67,7 +69,18 @@ export default function Layout() {
             }}
           />
           {user ? (
-            <SidebarItem icon={Settings} label={t.logout} active={false} onClick={signOut} />
+            <button
+              onClick={() => navigate('/dashboard')}
+              title={user.email || user.user_metadata?.full_name}
+              className="w-12 h-12 rounded-full flex items-center justify-center font-black text-base cursor-pointer transition-all hover:scale-110 mt-1"
+              style={{
+                background: location.pathname.startsWith('/dashboard') ? COLORS.purple : `${COLORS.purple}25`,
+                color: location.pathname.startsWith('/dashboard') ? 'white' : COLORS.purple,
+                border: `2px solid ${COLORS.purple}40`,
+              }}
+            >
+              {(user.user_metadata?.full_name || user.email || '?').charAt(0).toUpperCase()}
+            </button>
           ) : (
             <SidebarItem icon={Settings} label={t.login} active={false} onClick={() => navigate('/login')} />
           )}
@@ -81,15 +94,29 @@ export default function Layout() {
           className="flex items-center justify-end gap-4 px-6 py-3 sticky top-0 z-30"
           style={{ background: COLORS.white, borderBottom: `2px solid ${COLORS.gray200}` }}
         >
-          <div className="flex items-center gap-4 mr-auto">
-            <div className="flex items-center gap-1.5">
-              <FlameSVG size={20} />
-              <span className="font-black" style={{ color: COLORS.orange }}>0</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Star size={16} fill={COLORS.yellow} stroke={COLORS.yellowDark} />
-              <span className="font-black" style={{ color: COLORS.yellow }}>0 XP</span>
-            </div>
+          <div className="flex items-center gap-3 mr-auto">
+            <HudStat
+              icon={<FlameSVG size={18} />}
+              value={progress?.streak ?? 0}
+              color={COLORS.orange}
+              dimmed={!user}
+              title={lang === 'ko' ? '연속 출석' : 'Streak'}
+            />
+            <HudStat
+              icon={<Heart size={16} fill={progress?.hearts > 0 ? COLORS.red : 'none'} stroke={COLORS.red} strokeWidth={2.5} />}
+              value={`${progress?.hearts ?? 0}/5`}
+              color={COLORS.red}
+              dimmed={!user}
+              title={lang === 'ko' ? '하트' : 'Hearts'}
+            />
+            <HudStat
+              icon={<Star size={16} fill={COLORS.yellow} stroke={COLORS.yellowDark} strokeWidth={2.5} />}
+              value={progress?.stars ?? 0}
+              color={COLORS.yellow}
+              dimmed={!user}
+              title={lang === 'ko' ? '스타' : 'Stars'}
+            />
+            <LevelBadge level={level.level} progress={level.progress} dimmed={!user} />
           </div>
 
           {/* KO | EN Toggle */}
@@ -173,6 +200,41 @@ export default function Layout() {
           )
         })}
       </nav>
+    </div>
+  )
+}
+
+function HudStat({ icon, value, color, dimmed = false, title }) {
+  return (
+    <div
+      title={title}
+      className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-opacity"
+      style={{ opacity: dimmed ? 0.4 : 1 }}
+    >
+      {icon}
+      <span className="text-sm font-black" style={{ color }}>{value}</span>
+    </div>
+  )
+}
+
+function LevelBadge({ level, progress, dimmed = false }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-2.5 py-1 rounded-lg transition-opacity"
+      style={{
+        opacity: dimmed ? 0.4 : 1,
+        background: `${COLORS.purple}15`,
+        border: `2px solid ${COLORS.purple}40`,
+      }}
+      title="Level"
+    >
+      <span className="text-xs font-black" style={{ color: COLORS.purple }}>Lv{level}</span>
+      <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: `${COLORS.purple}30` }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${Math.round(progress * 100)}%`, background: COLORS.purple }}
+        />
+      </div>
     </div>
   )
 }
