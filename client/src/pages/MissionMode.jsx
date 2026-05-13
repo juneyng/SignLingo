@@ -67,10 +67,10 @@ export default function MissionMode() {
               {lang === 'ko' ? '자모 연습' : 'Fingerspell drill'}
             </p>
           </AccentCard>
-          <AccentCard color={COLORS.purple} darkColor={COLORS.purpleDark} onClick={() => navigate('/lessons')}>
+          <AccentCard color={COLORS.purple} darkColor={COLORS.purpleDark} onClick={() => navigate('/missions/quiz')}>
             <BookOpen size={22} color="white" strokeWidth={2.5} />
             <p className="text-white font-extrabold text-xs mt-2">
-              {lang === 'ko' ? '레슨 둘러보기' : 'Browse lessons'}
+              {lang === 'ko' ? '수어 퀴즈' : 'Sign Quiz'}
             </p>
           </AccentCard>
         </div>
