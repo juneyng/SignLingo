@@ -26,7 +26,7 @@ function pickNextRound(usedIds = new Set()) {
 export default function QuizMode() {
   const navigate = useNavigate()
   const { lang } = useLanguage()
-  const { addXp, addStars } = useProgress()
+  const { addXp, addStars, bumpMission } = useProgress()
   const comboCount = useCombo((s) => s.combo)
   const comboIncrement = useCombo((s) => s.increment)
   const comboBreak = useCombo((s) => s.break)
@@ -116,8 +116,9 @@ export default function QuizMode() {
     setPhase(PHASE.FEEDBACK)
   }
 
-  const advance = () => {
+  const advance = async () => {
     if (roundNum >= ROUNDS_PER_SESSION) {
+      try { await bumpMission('quiz_done') } catch (e) { /* ignore */ }
       setPhase(PHASE.SUMMARY)
     } else {
       startRound(roundNum + 1)

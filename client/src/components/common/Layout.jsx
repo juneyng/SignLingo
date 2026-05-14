@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Home, BookOpen, Target, BarChart3, Settings, Star, Heart, PanelRightClose, PanelRightOpen, Video, HelpCircle } from 'lucide-react'
+import { Home, BookOpen, Target, BarChart3, Settings, Star, Heart, PanelRightClose, PanelRightOpen, Video, HelpCircle, Zap, Brain } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
-import { SidebarItem, MissionCard, LeaderboardRow } from '@/design-system/components'
+import { SidebarItem, LeaderboardRow } from '@/design-system/components'
+import DailyMissionCard from './DailyMissionCard'
 import { FlameSVG } from '@/design-system/icons'
 import useAuth from '@/hooks/useAuth'
 import useProgress from '@/hooks/useProgress'
@@ -166,10 +167,8 @@ export default function Layout() {
             >
               <div className="py-6 px-5 overflow-y-auto flex-1" style={{ minWidth: 300 }}>
                 <h3 className="font-extrabold text-sm mb-3" style={{ color: COLORS.gray800 }}>{t.dailyMissions}</h3>
-                <div className="space-y-2 mb-6">
-                  <MissionCard icon={<Target size={16} color={COLORS.blue} />} title={lang === 'ko' ? '수어 3개 연습' : 'Practice 3 signs'} progress={0} target={3} xp={15} />
-                  <MissionCard icon={<FlameSVG size={16} />} title={lang === 'ko' ? '5분 연습' : '5-min session'} progress={0} target={1} xp={10} />
-                </div>
+                <DailyMissionList lang={lang} compact />
+                <div className="h-6" />
 
                 <h3 className="font-extrabold text-sm mb-3" style={{ color: COLORS.gray800 }}>
                   {lang === 'ko' ? '리더보드' : 'Leaderboard'}
@@ -200,6 +199,65 @@ export default function Layout() {
           )
         })}
       </nav>
+    </div>
+  )
+}
+
+export function DailyMissionList({ lang, compact = false }) {
+  const { row: progress } = useProgress()
+  const missions = progress?.daily_missions || {}
+  const claimed = new Set(missions.claimed || [])
+
+  const items = [
+    {
+      key: 'signs',
+      icon: <Target size={14} color={COLORS.blue} strokeWidth={2.5} />,
+      title: lang === 'ko' ? '수어 3개 연습' : 'Practice 3 signs',
+      progress: Math.min(3, Number(missions.signs_practiced) || 0),
+      target: 3,
+      xp: 30,
+      stars: 5,
+      completed: (Number(missions.signs_practiced) || 0) >= 3,
+    },
+    {
+      key: 'challenge',
+      icon: <Zap size={14} color={COLORS.orange} strokeWidth={2.5} />,
+      title: lang === 'ko' ? '지문자 챌린지 1회' : 'Fingerspelling challenge',
+      progress: missions.challenge_done ? 1 : 0,
+      target: 1,
+      xp: 25,
+      stars: 5,
+      completed: !!missions.challenge_done,
+    },
+    {
+      key: 'quiz',
+      icon: <Brain size={14} color={COLORS.purple} strokeWidth={2.5} />,
+      title: lang === 'ko' ? '퀴즈 1세션' : 'Complete a quiz',
+      progress: missions.quiz_done ? 1 : 0,
+      target: 1,
+      xp: 25,
+      stars: 10,
+      completed: !!missions.quiz_done,
+    },
+  ]
+
+  return (
+    <div className="space-y-2">
+      {items.map((m) => (
+        <DailyMissionCard
+          key={m.key}
+          missionKey={m.key}
+          icon={m.icon}
+          title={m.title}
+          progress={m.progress}
+          target={m.target}
+          xp={m.xp}
+          stars={m.stars}
+          isCompleted={m.completed}
+          isClaimed={claimed.has(m.key)}
+          compact={compact}
+        />
+      ))}
     </div>
   )
 }

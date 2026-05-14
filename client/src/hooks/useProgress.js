@@ -8,6 +8,9 @@ import {
   consumeHeart,
   addXp as apiAddXp,
   addStars as apiAddStars,
+  rotateDailyMissions,
+  bumpMissionProgress as apiBumpMission,
+  claimMissionReward as apiClaimMission,
 } from '@/services/api'
 
 /**
@@ -34,11 +37,12 @@ export default function useProgress() {
     setLoading(true)
     ;(async () => {
       try {
-        const streakRow = await touchStreak(user.id)
-        const heartsRow = await refillHearts(user.id)
-        const merged = heartsRow || streakRow || (await fetchProgress(user.id))
+        await touchStreak(user.id)
+        await refillHearts(user.id)
+        await rotateDailyMissions(user.id)
+        const fresh = await fetchProgress(user.id)
         if (!cancelled) {
-          setRow(merged)
+          setRow(fresh)
           setError(null)
         }
       } catch (e) {
@@ -86,6 +90,33 @@ export default function useProgress() {
     if (fresh) setRow(fresh)
   }, [user?.id, setRow])
 
+  const bumpMission = useCallback(
+    async (kind) => {
+      if (!user?.id) return null
+      try {
+        const missions = await apiBumpMission(user.id, kind)
+        if (missions) setRow({ ...(useProgressStore.getState().row ?? {}), daily_missions: missions })
+        return missions
+      } catch (e) {
+        console.warn('[useProgress] bumpMission failed:', e.message)
+        return null
+      }
+    },
+    [user?.id, setRow]
+  )
+
+  const claimMission = useCallback(
+    async (missionKey) => {
+      if (!user?.id) return null
+      const result = await apiClaimMission(user.id, missionKey)
+      if (result?.claimed) {
+        await refresh()
+      }
+      return result
+    },
+    [user?.id, refresh]
+  )
+
   return {
     row,
     loading,
@@ -95,5 +126,7 @@ export default function useProgress() {
     addStars,
     useHeart,
     refresh,
+    bumpMission,
+    claimMission,
   }
 }

@@ -51,7 +51,7 @@ export default function LessonPlay() {
   const comboCount = useCombo((s) => s.combo)
   const comboIncrement = useCombo((s) => s.increment)
   const comboBreak = useCombo((s) => s.break)
-  const { addXp, addStars } = useProgress()
+  const { addXp, addStars, bumpMission } = useProgress()
 
   // Recording buffer
   const framesRef = useRef([])
@@ -202,6 +202,7 @@ export default function LessonPlay() {
         try {
           const xpResult = await addXp(xpAmount)
           if (starAmount > 0) await addStars(starAmount)
+          await bumpMission('sign_practiced')
           setReward({
             xp: xpResult?.granted ?? xpAmount,
             stars: starAmount,

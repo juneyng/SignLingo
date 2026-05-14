@@ -129,3 +129,44 @@ export async function addStars(userId, amount) {
   if (error) throw error
   return data
 }
+
+// ============================================================
+// Daily missions
+// ============================================================
+
+export async function rotateDailyMissions(userId) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('rotate_daily_missions', { p_user_id: userId })
+  if (error) throw error
+  return data
+}
+
+export async function bumpMissionProgress(userId, kind) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('bump_mission_progress', {
+    p_user_id: userId,
+    p_kind: kind,
+  })
+  if (error) throw error
+  return data
+}
+
+/**
+ * Claim a mission reward.
+ * Returns { claimed, xp_granted, stars_granted, missions }.
+ */
+export async function claimMissionReward(userId, missionKey) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase.rpc('claim_mission_reward', {
+    p_user_id: userId,
+    p_mission: missionKey,
+  })
+  if (error) throw error
+  const first = Array.isArray(data) ? data[0] : data
+  return {
+    claimed: first?.claimed ?? false,
+    xpGranted: first?.xp_granted ?? 0,
+    starsGranted: first?.stars_granted ?? 0,
+    missions: first?.missions ?? null,
+  }
+}

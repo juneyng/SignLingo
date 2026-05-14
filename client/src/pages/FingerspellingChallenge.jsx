@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, X, Play, Zap, Heart, Star, Timer, ChevronRight, RotateCcw } from 'lucide-react'
+import { ArrowLeft, X, Play, Zap, Heart, Timer, ChevronRight, RotateCcw } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, Badge } from '@/design-system/components'
 import { HandMascot } from '@/design-system/icons'
@@ -30,22 +30,20 @@ function pickRandomSign() {
   const fingerspellingUnit = UNITS.find((u) => u.id === 'fingerspelling')
   if (!fingerspellingUnit) return null
   const signs = fingerspellingUnit.signs
-  // Prefer signs with recorded reference data; fall back to all
   const withRefs = signs.filter((s) => getRecordedSign(s.id))
   const pool = withRefs.length > 0 ? withRefs : signs
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
 function timeLimitForSign(sign) {
-  // Dynamic signs (diphthongs, ssang-consonants) get +2s
   return sign.type === 'dynamic' ? 12 : 10
 }
 
 export default function FingerspellingChallenge() {
   const navigate = useNavigate()
-  const { t, lang } = useLanguage()
+  const { lang } = useLanguage()
   const { user } = useAuth()
-  const { row: progress, addXp, addStars, useHeart } = useProgress()
+  const { row: progress, addXp, addStars, useHeart, bumpMission } = useProgress()
   const comboCount = useCombo((s) => s.combo)
   const comboIncrement = useCombo((s) => s.increment)
   const comboBreak = useCombo((s) => s.break)
@@ -63,15 +61,13 @@ export default function FingerspellingChallenge() {
   const [timeLeft, setTimeLeft] = useState(10)
   const [timeLimit, setTimeLimit] = useState(10)
   const [liveScore, setLiveScore] = useState(0)
-  const [resultData, setResultData] = useState(null) // { final, accuracy, timeBonus, xpGranted, stars, success }
+  const [resultData, setResultData] = useState(null)
   const [tracking, setTracking] = useState(false)
 
-  // Preload Supabase recordings once
-  useEffect(() => {
-    preloadRecordedSigns()
-  }, [])
+  useEffect(() => { preloadRecordedSigns() }, [])
 
-  // Init MediaPipe
+  // Init MediaPipe ONCE — the video element below stays mounted for the
+  // entire lifetime of the component (re-parented across phases).
   useEffect(() => {
     if (!videoRef.current) return
     let cancelled = false
@@ -89,7 +85,7 @@ export default function FingerspellingChallenge() {
     }
   }, [])
 
-  // Main play loop: each tick, decrement time + sample current similarity
+  // Play loop
   useEffect(() => {
     if (phase !== PHASE.PLAY || !currentSign) return
     maxScoreRef.current = 0
@@ -101,7 +97,6 @@ export default function FingerspellingChallenge() {
       const remaining = Math.max(0, timeLimit - elapsed)
       setTimeLeft(remaining)
 
-      // Compare current frame to reference landmarks
       const hands = latestResultsRef.current?.hands
       if (hands?.multiHandLandmarks?.length > 0) {
         const userNormalized = normalizeLandmarks(
@@ -114,8 +109,6 @@ export default function FingerspellingChallenge() {
             const score = compareSigns(userNormalized, refLandmarks)
             maxScoreRef.current = Math.max(maxScoreRef.current, score)
             setLiveScore(score)
-
-            // Instant success — hit threshold mid-challenge
             if (score >= SUCCESS_THRESHOLD) {
               finish({ success: true, remaining })
               return
@@ -123,10 +116,7 @@ export default function FingerspellingChallenge() {
           }
         }
       }
-
-      if (remaining <= 0) {
-        finish({ success: false, remaining: 0 })
-      }
+      if (remaining <= 0) finish({ success: false, remaining: 0 })
     }
 
     intervalRef.current = setInterval(tick, 100)
@@ -138,7 +128,6 @@ export default function FingerspellingChallenge() {
     clearInterval(intervalRef.current)
     const accuracy = success ? Math.max(SUCCESS_THRESHOLD, maxScoreRef.current) : maxScoreRef.current
     const timeRatio = remaining / timeLimit
-    // PDF: accuracy * 0.7 + timeRatio * 100 * 0.3
     const finalScore = Math.round(accuracy * 0.7 + timeRatio * 100 * 0.3)
 
     let xpGranted = 0
@@ -157,12 +146,10 @@ export default function FingerspellingChallenge() {
       }
     } else {
       comboBreak()
-      try {
-        await useHeart()
-      } catch (e) {
-        console.warn('[Challenge] heart consume failed:', e.message)
-      }
+      try { await useHeart() } catch (e) { /* ignore */ }
     }
+
+    try { await bumpMission('challenge_done') } catch (e) { /* ignore */ }
 
     setResultData({
       success,
@@ -176,17 +163,12 @@ export default function FingerspellingChallenge() {
   }
 
   const start = () => {
-    // Heart gate — block start if no hearts
     if (user && (progress?.hearts ?? 5) <= 0) {
       setPhase(PHASE.NO_HEARTS)
       return
     }
-
     const sign = pickRandomSign()
-    if (!sign) {
-      console.warn('[Challenge] no fingerspelling signs available')
-      return
-    }
+    if (!sign) return
     const limit = timeLimitForSign(sign)
     setCurrentSign(sign)
     setTimeLimit(limit)
@@ -205,26 +187,37 @@ export default function FingerspellingChallenge() {
     }, 1000)
   }
 
-  // Cleanup
+  const exitToIntro = () => {
+    clearInterval(intervalRef.current)
+    clearInterval(countdownRef.current)
+    setPhase(PHASE.INTRO)
+    setCurrentSign(null)
+    setResultData(null)
+  }
+
   useEffect(() => () => {
     clearInterval(intervalRef.current)
     clearInterval(countdownRef.current)
   }, [])
 
+  const inModal = phase === PHASE.COUNTDOWN || phase === PHASE.PLAY || phase === PHASE.RESULT
+
   return (
     <div className="max-w-4xl mx-auto space-y-4 animate-[fadeIn_0.5s_ease]">
-      {/* Top bar */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/missions')} className="cursor-pointer hover:scale-110 transition-transform">
-          <ArrowLeft size={22} strokeWidth={2.5} color={COLORS.gray400} />
-        </button>
-        <div className="flex items-center gap-2">
-          <Zap size={18} color={COLORS.orange} fill={COLORS.orange} strokeWidth={2.5} />
-          <h1 className="text-lg font-black" style={{ color: COLORS.gray800 }}>
-            {lang === 'ko' ? '지문자 10초 챌린지' : 'Fingerspelling 10s Challenge'}
-          </h1>
+      {/* Top bar (only when not in modal) */}
+      {!inModal && (
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/missions')} className="cursor-pointer hover:scale-110 transition-transform">
+            <ArrowLeft size={22} strokeWidth={2.5} color={COLORS.gray400} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Zap size={18} color={COLORS.orange} fill={COLORS.orange} strokeWidth={2.5} />
+            <h1 className="text-lg font-black" style={{ color: COLORS.gray800 }}>
+              {lang === 'ko' ? '지문자 10초 챌린지' : 'Fingerspelling 10s Challenge'}
+            </h1>
+          </div>
         </div>
-      </div>
+      )}
 
       {phase === PHASE.INTRO && (
         <IntroScreen lang={lang} onStart={start} tracking={tracking} progress={progress} />
@@ -234,40 +227,61 @@ export default function FingerspellingChallenge() {
         <NoHeartsScreen lang={lang} onBack={() => navigate('/missions')} />
       )}
 
-      {(phase === PHASE.COUNTDOWN || phase === PHASE.PLAY || phase === PHASE.RESULT) && (
-        <Card3D color={COLORS.gray200} padding="p-5">
-          {/* Hidden during INTRO/NO_HEARTS, but keep mounted to avoid re-init */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Target sign + timer */}
-            <div className="flex flex-col">
-              <div className="text-center pb-3">
-                <p className="text-xs font-extrabold uppercase tracking-wider" style={{ color: COLORS.gray400 }}>
-                  {lang === 'ko' ? '이 자모를 만들어보세요' : 'Make this sign'}
-                </p>
-              </div>
+      {/*
+        Webcam modal container.
+        - inModal=true:  full-screen modal overlay
+        - inModal=false: parked off-screen at 1×1 px so MediaPipe keeps streaming
+        The <video> element below NEVER unmounts.
+      */}
+      <div
+        className={inModal
+          ? 'fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 py-6 animate-[fadeIn_0.25s_ease]'
+          : 'fixed pointer-events-none opacity-0 overflow-hidden'}
+        style={!inModal ? { left: -9999, top: -9999, width: 1, height: 1 } : undefined}
+        aria-hidden={!inModal}
+      >
+        {inModal && (
+          <button
+            onClick={exitToIntro}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform z-10"
+            style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)' }}
+          >
+            <X size={20} color="white" strokeWidth={3} />
+          </button>
+        )}
 
-              <div className="flex-1 flex items-center justify-center rounded-2xl py-8"
-                style={{ background: `${COLORS.purple}10`, border: `2px solid ${COLORS.purple}30` }}>
-                <span className="font-black" style={{ fontSize: '7rem', lineHeight: 1, color: COLORS.purple }}>
-                  {currentSign?.name_ko ?? '?'}
-                </span>
-              </div>
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-5">
+          {/* Target sign panel */}
+          <div className="rounded-3xl p-5 flex flex-col"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '2px solid rgba(255,255,255,0.12)' }}>
+            <p className="text-xs font-extrabold uppercase tracking-wider text-center mb-3"
+              style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {lang === 'ko' ? '이 자모를 만들어보세요' : 'Make this sign'}
+            </p>
 
-              {currentSign && (
-                <p className="text-center text-xs font-bold mt-2" style={{ color: COLORS.gray500 }}>
-                  {currentSign.name_en} · {currentSign.tips_ko || currentSign.tips}
-                </p>
-              )}
+            <div className="flex-1 flex items-center justify-center rounded-2xl py-6 mb-3"
+              style={{ background: `${COLORS.purple}30`, border: `2px solid ${COLORS.purple}` }}>
+              <span className="font-black"
+                style={{ fontSize: 'min(40vh, 14rem)', lineHeight: 1, color: 'white' }}>
+                {currentSign?.name_ko ?? '?'}
+              </span>
+            </div>
 
-              {/* Timer */}
-              {phase === PHASE.PLAY && (
-                <div className="mt-3">
+            {currentSign && (
+              <p className="text-center text-xs font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                {currentSign.name_en} · {currentSign.tips_ko || currentSign.tips}
+              </p>
+            )}
+
+            {phase === PHASE.PLAY && (
+              <>
+                <div className="mt-4">
                   <div className="flex items-center justify-between text-xs font-extrabold mb-1">
-                    <span style={{ color: COLORS.gray500 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
                       <Timer size={12} className="inline mr-1" />
-                      {lang === 'ko' ? '남은 시간' : 'Time left'}
+                      {lang === 'ko' ? '남은 시간' : 'Time'}
                     </span>
-                    <span style={{ color: timeLeft <= 3 ? COLORS.red : COLORS.gray700 }}>
+                    <span style={{ color: timeLeft <= 3 ? COLORS.red : 'white' }}>
                       {timeLeft.toFixed(1)}s
                     </span>
                   </div>
@@ -277,14 +291,12 @@ export default function FingerspellingChallenge() {
                     height="h-2"
                   />
                 </div>
-              )}
-
-              {/* Live similarity bar */}
-              {phase === PHASE.PLAY && (
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs font-extrabold mb-1">
-                    <span style={{ color: COLORS.gray500 }}>{lang === 'ko' ? '현재 일치도' : 'Match'}</span>
-                    <span style={{ color: liveScore >= SUCCESS_THRESHOLD ? COLORS.green : COLORS.gray700 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      {lang === 'ko' ? '현재 일치도' : 'Match'}
+                    </span>
+                    <span style={{ color: liveScore >= SUCCESS_THRESHOLD ? COLORS.green : 'white' }}>
                       {Math.round(liveScore)}%
                     </span>
                   </div>
@@ -294,51 +306,41 @@ export default function FingerspellingChallenge() {
                     height="h-2"
                   />
                 </div>
-              )}
-            </div>
-
-            {/* Webcam */}
-            <div className="relative">
-              <div
-                className="relative rounded-2xl overflow-hidden"
-                style={{ border: `3px solid ${phase === PHASE.PLAY ? COLORS.red : COLORS.gray300}` }}
-              >
-                <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
-                <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full"
-                  width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
-
-                {phase === PHASE.COUNTDOWN && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <div className="text-8xl font-black text-white animate-ping">{countdown}</div>
-                  </div>
-                )}
-
-                <ComboDisplay position="top-right" />
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
-          {/* Result panel */}
-          {phase === PHASE.RESULT && resultData && (
-            <ResultPanel
-              lang={lang}
-              data={resultData}
-              onRetry={start}
-              onExit={() => navigate('/missions')}
-            />
-          )}
-        </Card3D>
-      )}
+          {/* Webcam panel */}
+          <div className="relative rounded-3xl overflow-hidden"
+            style={{
+              border: `3px solid ${phase === PHASE.PLAY ? COLORS.red : 'rgba(255,255,255,0.25)'}`,
+              boxShadow: phase === PHASE.PLAY ? `0 0 40px ${COLORS.red}80` : undefined,
+            }}>
+            <video ref={videoRef} className="w-full" autoPlay playsInline muted style={{ transform: 'scaleX(-1)' }} />
+            <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full"
+              width={640} height={480} style={{ transform: 'scaleX(-1)' }} />
 
-      {/* Always-mounted hidden video for INTRO / NO_HEARTS phases — keeps MediaPipe initialized */}
-      {(phase === PHASE.INTRO || phase === PHASE.NO_HEARTS) && (
-        <div className="hidden">
-          <video ref={videoRef} autoPlay playsInline muted />
-          <canvas ref={canvasRef} width={640} height={480} />
+            {phase === PHASE.COUNTDOWN && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="text-9xl font-black text-white animate-ping">{countdown}</div>
+              </div>
+            )}
+
+            <ComboDisplay position="top-right" />
+
+            {phase === PHASE.RESULT && resultData && (
+              <ResultOverlay
+                lang={lang}
+                data={resultData}
+                onRetry={start}
+                onExit={exitToIntro}
+              />
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
     </div>
   )
 }
@@ -406,52 +408,52 @@ function NoHeartsScreen({ lang, onBack }) {
   )
 }
 
-function ResultPanel({ lang, data, onRetry, onExit }) {
+function ResultOverlay({ lang, data, onRetry, onExit }) {
   const { success, finalScore, accuracy, timeBonus, xpGranted, stars } = data
   return (
-    <div className="mt-5 rounded-2xl p-5 animate-[fadeIn_0.4s_ease]"
-      style={{ background: success ? `${COLORS.green}10` : `${COLORS.gray100}`, border: `2px solid ${success ? COLORS.green : COLORS.gray300}` }}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-extrabold uppercase tracking-wider"
-            style={{ color: success ? COLORS.green : COLORS.gray500 }}>
-            {success
-              ? (lang === 'ko' ? '🎉 성공!' : '🎉 Success!')
-              : (lang === 'ko' ? '⏱ 시간 종료' : '⏱ Time’s up')}
-          </p>
-          <p className="text-4xl font-black mt-1" style={{ color: success ? COLORS.green : COLORS.gray700 }}>
-            {finalScore}
-            <span className="text-sm font-bold ml-1" style={{ color: COLORS.gray400 }}>/100</span>
-          </p>
-        </div>
-        <div className="text-right text-xs space-y-1" style={{ color: COLORS.gray600 }}>
-          <p>{lang === 'ko' ? '정확도' : 'Accuracy'}: <span className="font-black">{accuracy}%</span> × 0.7</p>
-          <p>{lang === 'ko' ? '시간 보너스' : 'Time bonus'}: <span className="font-black">{timeBonus}</span> × 0.3</p>
-        </div>
-      </div>
-
-      {success && (
-        <div className="mt-4 flex items-center gap-3">
-          <Badge color={COLORS.yellow}>+{xpGranted} XP</Badge>
-          {stars > 0 && <Badge color={COLORS.yellow}>+{stars} ★</Badge>}
-        </div>
-      )}
-
-      <div className="mt-5 flex gap-2">
-        <ButtonOutline color={COLORS.gray400} icon={<X size={14} />} onClick={onExit}>
-          {lang === 'ko' ? '종료' : 'Exit'}
-        </ButtonOutline>
-        <Button3D
-          className="flex-1"
-          color={COLORS.orange}
-          darkColor={COLORS.orangeDark}
-          icon={success ? <ChevronRight size={16} /> : <RotateCcw size={16} />}
-          onClick={onRetry}
-        >
+    <div className="absolute inset-0 flex items-center justify-center px-6 animate-[fadeIn_0.3s_ease]"
+      style={{ background: 'rgba(0,0,0,0.7)' }}>
+      <div className="rounded-3xl p-6 max-w-sm w-full text-center"
+        style={{
+          background: 'white',
+          borderBottom: `4px solid ${success ? COLORS.green : COLORS.gray400}`,
+        }}>
+        <p className="text-xs font-extrabold uppercase tracking-wider"
+          style={{ color: success ? COLORS.green : COLORS.gray500 }}>
           {success
-            ? (lang === 'ko' ? '한 번 더!' : 'One more!')
-            : (lang === 'ko' ? '다시 시도' : 'Try again')}
-        </Button3D>
+            ? (lang === 'ko' ? '🎉 성공!' : '🎉 Success!')
+            : (lang === 'ko' ? '⏱ 시간 종료' : '⏱ Time’s up')}
+        </p>
+        <p className="text-5xl font-black mt-2" style={{ color: success ? COLORS.green : COLORS.gray700 }}>
+          {finalScore}
+          <span className="text-base font-bold ml-1" style={{ color: COLORS.gray400 }}>/100</span>
+        </p>
+        <div className="text-xs space-y-0.5 mt-3" style={{ color: COLORS.gray600 }}>
+          <p>{lang === 'ko' ? '정확도' : 'Accuracy'} {accuracy}% × 0.7</p>
+          <p>{lang === 'ko' ? '시간 보너스' : 'Time bonus'} {timeBonus} × 0.3</p>
+        </div>
+        {success && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <Badge color={COLORS.yellow}>+{xpGranted} XP</Badge>
+            {stars > 0 && <Badge color={COLORS.yellow}>+{stars} ★</Badge>}
+          </div>
+        )}
+        <div className="mt-5 flex gap-2">
+          <ButtonOutline color={COLORS.gray400} icon={<X size={14} />} onClick={onExit}>
+            {lang === 'ko' ? '종료' : 'Exit'}
+          </ButtonOutline>
+          <Button3D
+            className="flex-1"
+            color={COLORS.orange}
+            darkColor={COLORS.orangeDark}
+            icon={success ? <ChevronRight size={16} /> : <RotateCcw size={16} />}
+            onClick={onRetry}
+          >
+            {success
+              ? (lang === 'ko' ? '한 번 더!' : 'One more!')
+              : (lang === 'ko' ? '다시 시도' : 'Try again')}
+          </Button3D>
+        </div>
       </div>
     </div>
   )

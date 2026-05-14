@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { Target, Zap, Gift, Clock, Award, Lock, Trophy, BookOpen } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
-import { Card3D, AccentCard, MissionCard, Button3D } from '@/design-system/components'
-import { HandMascot } from '@/design-system/icons'
+import { Card3D, AccentCard } from '@/design-system/components'
 import useLanguage from '@/stores/useLanguage'
+import useProgress from '@/hooks/useProgress'
+import { DailyMissionList } from '@/components/common/Layout'
 
 const achievementsDef = [
   { nameEn: 'First Sign', nameKo: '첫 수어', icon: <Award size={20} />, color: COLORS.green, earned: false },
@@ -16,12 +17,17 @@ const achievementsDef = [
 export default function MissionMode() {
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
+  const { row: progress } = useProgress()
 
-  const missions = [
-    { icon: <Target size={16} color={COLORS.blue} />, title: t.practice3Signs, progress: 0, target: 3, xp: 15 },
-    { icon: <Clock size={16} color={COLORS.purple} />, title: t.fiveMinSession, progress: 0, target: 1, xp: 10 },
-    { icon: <Zap size={16} color={COLORS.orange} />, title: t.score80, progress: 0, target: 1, xp: 20 },
-  ]
+  const missions = progress?.daily_missions || {}
+  const claimed = new Set(missions.claimed || [])
+  const completedCount = ['signs', 'challenge', 'quiz'].filter((k) => {
+    if (k === 'signs') return (Number(missions.signs_practiced) || 0) >= 3
+    if (k === 'challenge') return !!missions.challenge_done
+    if (k === 'quiz') return !!missions.quiz_done
+    return false
+  }).length
+  const claimedCount = ['signs', 'challenge', 'quiz'].filter((k) => claimed.has(k)).length
 
   return (
     <div className="space-y-5 animate-[fadeIn_0.7s_ease]">
@@ -30,24 +36,31 @@ export default function MissionMode() {
         <p className="text-sm font-semibold mt-1" style={{ color: COLORS.gray400 }}>{t.missionsSubtitle}</p>
       </div>
 
-      {/* Daily reward + missions — side by side on wide screens */}
+      {/* Daily reward + missions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card3D color={COLORS.orange + '40'} padding="p-4">
+        <Card3D color={completedCount === 3 ? COLORS.green : `${COLORS.orange}40`} padding="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: COLORS.orangeBg }}>
-              <Gift size={20} color={COLORS.orange} strokeWidth={2.5} />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: completedCount === 3 ? `${COLORS.green}25` : COLORS.orangeBg }}>
+              <Gift size={20} color={completedCount === 3 ? COLORS.green : COLORS.orange} strokeWidth={2.5} />
             </div>
             <div className="flex-1">
               <p className="font-extrabold text-sm" style={{ color: COLORS.gray800 }}>{t.dailyBonus}</p>
-              <p className="text-xs font-semibold" style={{ color: COLORS.gray500 }}>{t.dailyBonusDesc}</p>
+              <p className="text-xs font-semibold" style={{ color: COLORS.gray500 }}>
+                {completedCount === 3
+                  ? (lang === 'ko' ? '모두 완료! 보상을 받아보세요.' : 'All done! Claim your rewards.')
+                  : (lang === 'ko' ? `${claimedCount}/3 보상 수령` : `${claimedCount}/3 rewards claimed`)}
+              </p>
             </div>
-            <span className="font-black text-sm" style={{ color: COLORS.orange }}>0/3</span>
+            <span className="font-black text-sm" style={{ color: completedCount === 3 ? COLORS.green : COLORS.orange }}>
+              {completedCount}/3
+            </span>
           </div>
         </Card3D>
 
         <div className="lg:col-span-2 space-y-2">
           <h3 className="font-extrabold text-sm" style={{ color: COLORS.gray800 }}>{t.todaysMissions}</h3>
-          {missions.map((m, i) => <MissionCard key={i} {...m} />)}
+          <DailyMissionList lang={lang} />
         </div>
       </div>
 
