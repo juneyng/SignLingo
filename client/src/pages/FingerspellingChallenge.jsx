@@ -269,7 +269,7 @@ export default function FingerspellingChallenge() {
 
             {currentSign && (
               <p className="text-center text-xs font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                {currentSign.name_en} · {currentSign.tips_ko || currentSign.tips}
+                {currentSign.name_en} · {lang === 'ko' ? (currentSign.tips_ko || currentSign.tips) : (currentSign.tips || currentSign.tips_ko)}
               </p>
             )}
 

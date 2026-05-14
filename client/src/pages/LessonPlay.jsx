@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, X, Check, Play, ChevronRight, ExternalLink, RotateCcw, Eye, Video, AlertCircle, Camera, Sun, Square, User } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, FeedbackCard, Badge } from '@/design-system/components'
@@ -22,6 +22,8 @@ const PHASE = { WATCH: 'watch', COUNTDOWN: 'countdown', RECORDING: 'recording', 
 
 export default function LessonPlay() {
   const { lessonId } = useParams()
+  const [searchParams] = useSearchParams()
+  const targetSignId = searchParams.get('sign')
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
   const videoRef = useRef(null)
@@ -31,7 +33,20 @@ export default function LessonPlay() {
   const unit = getUnit(lessonId)
   const signs = unit.signs
 
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (!targetSignId) return 0
+    const idx = signs.findIndex((s) => s.id === targetSignId)
+    return idx >= 0 ? idx : 0
+  })
+
+  // If the user navigates to a different sign within the same unit
+  // (URL query param changes), jump to that sign without remounting.
+  useEffect(() => {
+    if (!targetSignId) return
+    const idx = signs.findIndex((s) => s.id === targetSignId)
+    if (idx >= 0 && idx !== currentIndex) setCurrentIndex(idx)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetSignId])
   const [phase, setPhase] = useState(PHASE.WATCH)
   const [countdown, setCountdown] = useState(3)
   const [recordProgress, setRecordProgress] = useState(0)
@@ -330,7 +345,9 @@ export default function LessonPlay() {
             <div className="rounded-2xl overflow-hidden mb-4" style={{ background: COLORS.orangeBg, border: `2px dashed ${COLORS.orange}80` }}>
               <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
                 <AlertCircle size={32} color={COLORS.orange} strokeWidth={2.5} />
-                <p className="text-4xl font-black mt-3" style={{ color: COLORS.gray800 }}>{currentSign.name_ko}</p>
+                <p className="text-4xl font-black mt-3" style={{ color: COLORS.gray800 }}>
+                  {lang === 'ko' ? currentSign.name_ko : currentSign.name_en}
+                </p>
                 <p className="font-extrabold text-sm mt-3" style={{ color: COLORS.orangeDark }}>
                   {lang === 'ko' ? '참고 영상이 아직 등록되지 않았어요' : 'No reference video registered yet'}
                 </p>
@@ -351,7 +368,12 @@ export default function LessonPlay() {
             </div>
           )}
 
-          <p className="font-black text-lg" style={{ color: COLORS.gray800 }}>{currentSign.name_en}</p>
+          <p className="font-black text-lg" style={{ color: COLORS.gray800 }}>
+            {lang === 'ko' ? currentSign.name_ko : currentSign.name_en}
+          </p>
+          <p className="text-[11px] font-bold" style={{ color: COLORS.gray400 }}>
+            {lang === 'ko' ? currentSign.name_en : currentSign.name_ko}
+          </p>
           <p className="text-xs font-semibold mt-1" style={{ color: COLORS.gray500 }}>{desc}</p>
 
           {tips && (

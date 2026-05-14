@@ -89,7 +89,7 @@ export default function LessonSelect() {
                 {unit.signs.map((sign) => (
                   <button
                     key={sign.id}
-                    onClick={() => navigate(`/lessons/${unit.id}`)}
+                    onClick={() => navigate(`/lessons/${unit.id}?sign=${encodeURIComponent(sign.id)}`)}
                     className="flex items-center gap-2 p-2.5 rounded-xl bg-white cursor-pointer transition-all hover:scale-[1.03] hover:shadow-md text-left"
                     style={{ border: `2px solid ${COLORS.gray200}` }}
                   >

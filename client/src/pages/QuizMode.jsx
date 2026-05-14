@@ -175,7 +175,11 @@ export default function QuizMode() {
             ) : (
               <div className="aspect-video flex flex-col items-center justify-center text-center p-4">
                 <p className="text-5xl font-black" style={{ color: COLORS.purple }}>
-                  {getSign(entry.signId)?.name_ko ?? entry.signId}
+                  {(() => {
+                    const s = getSign(entry.signId)
+                    if (!s) return entry.signId
+                    return lang === 'ko' ? s.name_ko : s.name_en
+                  })()}
                 </p>
                 <p className="text-xs font-bold mt-2" style={{ color: COLORS.gray400 }}>
                   {lang === 'ko' ? '(참고 영상 미녹화)' : '(reference video not recorded)'}

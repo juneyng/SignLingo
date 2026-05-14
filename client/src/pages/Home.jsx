@@ -60,9 +60,13 @@ export default function Home() {
             {firstUnit.signs.slice(0, 4).map((sign) => (
               <div key={sign.id} className="rounded-xl p-3 text-center hover:scale-[1.02] transition-transform cursor-pointer"
                 style={{ background: COLORS.gray50, border: `2px solid ${COLORS.gray200}` }}
-                onClick={() => navigate(`/lessons/${firstUnit.id}`)}>
-                <p className="text-xl font-black" style={{ color: COLORS.gray800 }}>{sign.name_ko}</p>
-                <p className="text-[9px] font-bold mt-0.5" style={{ color: COLORS.gray400 }}>{sign.name_en}</p>
+                onClick={() => navigate(`/lessons/${firstUnit.id}?sign=${encodeURIComponent(sign.id)}`)}>
+                <p className="text-xl font-black" style={{ color: COLORS.gray800 }}>
+                  {lang === 'ko' ? sign.name_ko : sign.name_en}
+                </p>
+                <p className="text-[9px] font-bold mt-0.5" style={{ color: COLORS.gray400 }}>
+                  {lang === 'ko' ? sign.name_en : sign.name_ko}
+                </p>
               </div>
             ))}
           </div>
