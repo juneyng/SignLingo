@@ -335,3 +335,42 @@ function shuffle(arr) {
   }
   return a
 }
+
+/**
+ * Build a meaning-based round (video → which word does this sign mean?).
+ *
+ * Prefers distractors from the SAME 5W1H category so the wrong options
+ * sound plausible (e.g. all "who" signs together).
+ *
+ * @param {object} entry        one QUIZ_BANK entry
+ * @param {(id:string)=>object} resolveSign  (id) => sign record
+ * @param {'ko'|'en'} lang
+ * @returns {{ correctSignId, correctText, options: {signId, text}[] }}
+ */
+export function buildMeaningOptions(entry, resolveSign, lang) {
+  const correctSign = resolveSign(entry.signId)
+  if (!correctSign) return null
+  const correctText = lang === 'ko' ? correctSign.name_ko : correctSign.name_en
+
+  const sameCategory = QUIZ_BANK.filter((q) => q.category === entry.category && q.signId !== entry.signId)
+  const otherCategory = QUIZ_BANK.filter((q) => q.category !== entry.category)
+
+  const pool = [...shuffle(sameCategory), ...shuffle(otherCategory)]
+  const distractors = []
+  const seenText = new Set([correctText])
+  for (const q of pool) {
+    if (distractors.length >= 3) break
+    const s = resolveSign(q.signId)
+    if (!s) continue
+    const text = lang === 'ko' ? s.name_ko : s.name_en
+    if (seenText.has(text)) continue
+    seenText.add(text)
+    distractors.push({ signId: q.signId, text })
+  }
+
+  const options = shuffle([
+    { signId: entry.signId, text: correctText },
+    ...distractors,
+  ])
+  return { correctSignId: entry.signId, correctText, options }
+}

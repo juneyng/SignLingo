@@ -6,7 +6,7 @@ import { Button3D, ButtonOutline, Card3D, ProgressBar, Badge } from '@/design-sy
 import { HandMascot } from '@/design-system/icons'
 import { getSignVideo, preloadRecordedSigns } from '@/services/signStorage'
 import { getSign } from '@/data/signDatabase'
-import { QUIZ_BANK, buildOptions } from '@/data/quizQuestions'
+import { QUIZ_BANK, buildMeaningOptions } from '@/data/quizQuestions'
 import useLanguage from '@/stores/useLanguage'
 import useProgress from '@/hooks/useProgress'
 import useCombo, { comboMultiplier } from '@/stores/useCombo'
@@ -34,35 +34,33 @@ export default function QuizMode() {
   const [phase, setPhase] = useState(PHASE.INTRO)
   const [roundNum, setRoundNum] = useState(0)
   const [usedIds] = useState(() => new Set())
-  const [entry, setEntry] = useState(null)
-  const [options, setOptions] = useState([])
-  const [correctText, setCorrectText] = useState('')
-  const [videoUrl, setVideoUrl] = useState(null)
-  const [selected, setSelected] = useState(null) // index
-  const [history, setHistory] = useState([]) // { signId, correct: bool, xp, stars }
+  const [round, setRound] = useState(null) // { correctSignId, correctText, options: [{signId, text}], videoUrl }
+  const [selected, setSelected] = useState(null)
+  const [history, setHistory] = useState([])
   const [correctStreak, setCorrectStreak] = useState(0)
+  const [videoError, setVideoError] = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+  const [preloaded, setPreloaded] = useState(false)
 
   const videoRef = useRef(null)
 
-  // Preload Supabase video catalog
-  useEffect(() => { preloadRecordedSigns() }, [])
+  useEffect(() => {
+    preloadRecordedSigns().then(() => setPreloaded(true))
+  }, [])
 
   const startRound = async (n = 1) => {
-    const next = pickNextRound(usedIds)
-    usedIds.add(next.signId)
-    const { correct, options: opts } = buildOptions(next, lang, 'easy')
-    setEntry(next)
-    setCorrectText(correct)
-    setOptions(opts)
+    await preloadRecordedSigns()
+    const entry = pickNextRound(usedIds)
+    usedIds.add(entry.signId)
+    const built = buildMeaningOptions(entry, getSign, lang)
+    if (!built) return
+    const url = await getSignVideo(entry.signId).catch(() => null)
+    setRound({ ...built, videoUrl: url })
     setSelected(null)
+    setVideoError(false)
+    setVideoReady(false)
     setRoundNum(n)
     setPhase(PHASE.PLAY)
-    try {
-      const url = await getSignVideo(next.signId)
-      setVideoUrl(url || null)
-    } catch {
-      setVideoUrl(null)
-    }
   }
 
   const startSession = () => {
@@ -75,8 +73,8 @@ export default function QuizMode() {
   const handleSelect = async (idx) => {
     if (selected !== null) return
     setSelected(idx)
-    const chosen = options[idx]
-    const isCorrect = chosen === correctText
+    const chosen = round.options[idx]
+    const isCorrect = chosen.text === round.correctText
 
     let xpGranted = 0
     let starsGranted = 0
@@ -107,7 +105,7 @@ export default function QuizMode() {
 
     setCorrectStreak(newStreak)
     setHistory((h) => [...h, {
-      signId: entry.signId,
+      signId: round.correctSignId,
       correct: isCorrect,
       xp: xpGranted,
       stars: starsGranted + bonusStars,
@@ -127,7 +125,6 @@ export default function QuizMode() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4 animate-[fadeIn_0.5s_ease]">
-      {/* Top bar */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/missions')} className="cursor-pointer hover:scale-110 transition-transform">
           <ArrowLeft size={22} strokeWidth={2.5} color={COLORS.gray400} />
@@ -135,51 +132,62 @@ export default function QuizMode() {
         <div className="flex items-center gap-2">
           <Brain size={18} color={COLORS.purple} strokeWidth={2.5} />
           <h1 className="text-lg font-black" style={{ color: COLORS.gray800 }}>
-            {lang === 'ko' ? '수어 퀴즈 — 질문 맞히기' : 'Sign Quiz — Match the Question'}
+            {lang === 'ko' ? '수어 퀴즈 — 뜻 맞히기' : 'Sign Quiz — Pick the Meaning'}
           </h1>
         </div>
-        {phase === PHASE.PLAY || phase === PHASE.FEEDBACK ? (
+        {(phase === PHASE.PLAY || phase === PHASE.FEEDBACK) && (
           <span className="ml-auto text-xs font-extrabold" style={{ color: COLORS.gray500 }}>
             {roundNum}/{ROUNDS_PER_SESSION}
           </span>
-        ) : null}
+        )}
       </div>
 
       {phase !== PHASE.INTRO && phase !== PHASE.SUMMARY && (
         <ProgressBar progress={(roundNum / ROUNDS_PER_SESSION) * 100} color={COLORS.purple} height="h-2" />
       )}
 
-      {phase === PHASE.INTRO && <IntroScreen lang={lang} onStart={startSession} />}
+      {phase === PHASE.INTRO && <IntroScreen lang={lang} onStart={startSession} ready={preloaded} />}
 
-      {(phase === PHASE.PLAY || phase === PHASE.FEEDBACK) && entry && (
+      {(phase === PHASE.PLAY || phase === PHASE.FEEDBACK) && round && (
         <Card3D color={COLORS.gray200} padding="p-5">
-          {/* Sign video */}
+          {/* Prompt */}
           <p className="text-xs font-extrabold uppercase tracking-wider text-center mb-2"
             style={{ color: COLORS.gray400 }}>
-            {lang === 'ko' ? '이 수어는 어떤 질문에 대한 답일까요?' : 'Which question does this sign answer?'}
+            {lang === 'ko' ? '이 수어의 뜻을 골라보세요' : 'Pick the meaning of this sign'}
           </p>
 
-          <div className="rounded-2xl overflow-hidden mx-auto mb-4"
-            style={{ maxWidth: 360, border: `2px solid ${COLORS.purple}30`, background: COLORS.gray100 }}>
-            {videoUrl ? (
-              <video
-                ref={videoRef}
-                key={entry.signId}
-                src={videoUrl}
-                className="w-full"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
+          {/* Sign video */}
+          <div className="rounded-2xl overflow-hidden mx-auto mb-4 relative bg-black"
+            style={{ maxWidth: 360, aspectRatio: '4/3', border: `2px solid ${COLORS.purple}30` }}>
+            {round.videoUrl && !videoError ? (
+              <>
+                <video
+                  ref={videoRef}
+                  key={round.correctSignId}
+                  src={round.videoUrl}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  onCanPlay={(e) => {
+                    setVideoReady(true)
+                    const p = e.currentTarget.play()
+                    if (p && p.catch) p.catch(() => {})
+                  }}
+                  onError={() => setVideoError(true)}
+                />
+                {!videoReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
+                    <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="aspect-video flex flex-col items-center justify-center text-center p-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3"
+                style={{ background: COLORS.gray100 }}>
                 <p className="text-5xl font-black" style={{ color: COLORS.purple }}>
-                  {(() => {
-                    const s = getSign(entry.signId)
-                    if (!s) return entry.signId
-                    return lang === 'ko' ? s.name_ko : s.name_en
-                  })()}
+                  {getSign(round.correctSignId)?.name_ko ?? round.correctSignId}
                 </p>
                 <p className="text-xs font-bold mt-2" style={{ color: COLORS.gray400 }}>
                   {lang === 'ko' ? '(참고 영상 미녹화)' : '(reference video not recorded)'}
@@ -189,10 +197,10 @@ export default function QuizMode() {
           </div>
 
           {/* Options */}
-          <div className="grid grid-cols-1 gap-2.5">
-            {options.map((opt, i) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {round.options.map((opt, i) => {
               const isChosen = selected === i
-              const isCorrectOpt = opt === correctText
+              const isCorrectOpt = opt.text === round.correctText
               let bg = 'white'
               let border = COLORS.gray200
               let textColor = COLORS.gray800
@@ -214,7 +222,7 @@ export default function QuizMode() {
 
               return (
                 <button
-                  key={i}
+                  key={`${i}_${opt.signId}`}
                   onClick={() => handleSelect(i)}
                   disabled={phase === PHASE.FEEDBACK}
                   className="flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-all"
@@ -235,7 +243,7 @@ export default function QuizMode() {
                         ? <X size={14} strokeWidth={3} />
                         : String.fromCharCode(65 + i)}
                   </span>
-                  <span className="text-sm font-extrabold flex-1" style={{ color: textColor }}>{opt}</span>
+                  <span className="text-sm font-extrabold flex-1" style={{ color: textColor }}>{opt.text}</span>
                 </button>
               )
             })}
@@ -244,7 +252,7 @@ export default function QuizMode() {
           {phase === PHASE.FEEDBACK && (
             <FeedbackFooter
               lang={lang}
-              entry={entry}
+              correctText={round.correctText}
               last={history[history.length - 1]}
               onAdvance={advance}
               isLastRound={roundNum >= ROUNDS_PER_SESSION}
@@ -267,19 +275,19 @@ export default function QuizMode() {
   )
 }
 
-function IntroScreen({ lang, onStart }) {
+function IntroScreen({ lang, onStart, ready = true }) {
   return (
     <Card3D color={COLORS.purple} padding="p-6">
       <div className="flex items-center gap-4">
         <HandMascot size={64} mood="excited" />
         <div className="flex-1">
           <h2 className="text-xl font-black" style={{ color: COLORS.gray800 }}>
-            {lang === 'ko' ? '수어를 보고 질문을 골라보세요!' : 'Watch the sign and pick the right question'}
+            {lang === 'ko' ? '수어 영상을 보고 뜻을 맞혀보세요!' : 'Watch the sign and pick its meaning'}
           </h2>
           <p className="text-sm font-semibold mt-1" style={{ color: COLORS.gray500 }}>
             {lang === 'ko'
-              ? '단어를 외우는 게 아니라, 그 단어가 어떤 상황에서 쓰이는지 익히는 모드예요.'
-              : 'Less memorization — more context. Learn how each sign is used in real questions.'}
+              ? '4개의 단어 중 영상이 가리키는 단어를 고르면 돼요.'
+              : 'Pick the word the sign actually means.'}
           </p>
         </div>
       </div>
@@ -299,25 +307,20 @@ function IntroScreen({ lang, onStart }) {
           darkColor={COLORS.purpleDark}
           icon={<Brain size={18} />}
           onClick={onStart}
+          disabled={!ready}
         >
-          {lang === 'ko' ? '퀴즈 시작' : 'Start Quiz'}
+          {ready
+            ? (lang === 'ko' ? '퀴즈 시작' : 'Start Quiz')
+            : (lang === 'ko' ? '영상 불러오는 중...' : 'Loading videos...')}
         </Button3D>
       </div>
     </Card3D>
   )
 }
 
-function FeedbackFooter({ lang, entry, last, onAdvance, isLastRound }) {
+function FeedbackFooter({ lang, correctText, last, onAdvance, isLastRound }) {
   if (!last) return null
   const isCorrect = last.correct
-  const categoryLabel = {
-    who: lang === 'ko' ? '누구 (Who)' : 'Who',
-    what: lang === 'ko' ? '무엇 (What)' : 'What',
-    where: lang === 'ko' ? '어디서 (Where)' : 'Where',
-    when: lang === 'ko' ? '언제 (When)' : 'When',
-    how_feel: lang === 'ko' ? '기분/상태 (How feel)' : 'How (feel)',
-    how_many: lang === 'ko' ? '얼마/몇 (How many)' : 'How many',
-  }[entry.category] || entry.category
 
   return (
     <div
@@ -335,11 +338,12 @@ function FeedbackFooter({ lang, entry, last, onAdvance, isLastRound }) {
               ? (lang === 'ko' ? '🎉 정답!' : '🎉 Correct!')
               : (lang === 'ko' ? '아쉬워요!' : 'Not quite!')}
           </p>
-          <p className="text-xs font-bold mt-1" style={{ color: COLORS.gray600 }}>
-            {lang === 'ko' ? '이 수어는 ' : 'This sign answers '}
-            <span className="font-black" style={{ color: COLORS.purple }}>{categoryLabel}</span>
-            {lang === 'ko' ? ' 질문에 대한 답이에요.' : ' questions.'}
-          </p>
+          {!isCorrect && (
+            <p className="text-xs font-bold mt-1" style={{ color: COLORS.gray600 }}>
+              {lang === 'ko' ? '정답: ' : 'Answer: '}
+              <span className="font-black" style={{ color: COLORS.purple }}>{correctText}</span>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {isCorrect && <Badge color={COLORS.yellow}>+{last.xp} XP</Badge>}
