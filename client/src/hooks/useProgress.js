@@ -1,14 +1,12 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import useStore from '@/stores/useStore'
 import useProgressStore from '@/stores/useProgress'
 import {
   fetchProgress,
   touchStreak,
-  refillHearts,
-  consumeHeart,
+  rotateDailyMissions,
   addXp as apiAddXp,
   addStars as apiAddStars,
-  rotateDailyMissions,
   bumpMissionProgress as apiBumpMission,
   claimMissionReward as apiClaimMission,
 } from '@/services/api'
@@ -16,44 +14,58 @@ import {
 /**
  * Bridge between Supabase user_progress row and the Zustand store.
  *
- * On mount (and whenever user changes):
- *   1. Ensures a user_progress row exists (touchStreak handles it).
- *   2. Updates streak based on last_login_date.
- *   3. Refills hearts based on elapsed time.
- *
- * Exposes update helpers that hit Supabase RPCs and patch the store.
+ * The init effect runs at most ONCE per (mount instance × user.id) AND
+ * is gated by a module-level "in-flight" flag so that multiple consumers
+ * of useProgress() don't fire duplicate fetches that can clobber each
+ * other (race-condition where a stale fetch lands after a fresh addXp).
  */
+
+// Module-level singleton state
+let inFlightForUser = null  // user.id currently being initialized
+let initializedForUser = null // user.id whose row has been loaded at least once
+
 export default function useProgress() {
   const user = useStore((s) => s.user)
   const { row, loading, error, setRow, setLoading, setError, getLevel } = useProgressStore()
+  const localRunRef = useRef(false)
 
-  // Initial load — runs on login + once per session.
   useEffect(() => {
     if (!user?.id) {
       setRow(null)
+      initializedForUser = null
+      inFlightForUser = null
       return
     }
-    let cancelled = false
+    // Already initialized for this user — nothing to do.
+    if (initializedForUser === user.id) return
+    // Another component is fetching right now — wait.
+    if (inFlightForUser === user.id) return
+
+    inFlightForUser = user.id
+    localRunRef.current = true
     setLoading(true)
     ;(async () => {
       try {
         await touchStreak(user.id)
-        await refillHearts(user.id)
         await rotateDailyMissions(user.id)
         const fresh = await fetchProgress(user.id)
-        if (!cancelled) {
+        // Only commit if user hasn't switched since we started.
+        if (user.id === inFlightForUser) {
           setRow(fresh)
           setError(null)
+          initializedForUser = user.id
         }
       } catch (e) {
-        if (!cancelled) setError(e.message)
+        if (user.id === inFlightForUser) setError(e.message)
         console.error('[useProgress] init failed:', e)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (inFlightForUser === user.id) inFlightForUser = null
+        setLoading(false)
       }
     })()
     return () => {
-      cancelled = true
+      // If this component unmounts mid-fetch, leave the in-flight flag alone
+      // so siblings don't kick off a duplicate request.
     }
   }, [user?.id, setRow, setLoading, setError])
 
@@ -77,17 +89,11 @@ export default function useProgress() {
     [user?.id, setRow]
   )
 
-  const useHeart = useCallback(async () => {
-    if (!user?.id) return null
-    const updated = await consumeHeart(user.id)
-    if (updated) setRow(updated)
-    return updated
-  }, [user?.id, setRow])
-
   const refresh = useCallback(async () => {
-    if (!user?.id) return
+    if (!user?.id) return null
     const fresh = await fetchProgress(user.id)
     if (fresh) setRow(fresh)
+    return fresh
   }, [user?.id, setRow])
 
   const bumpMission = useCallback(
@@ -124,7 +130,6 @@ export default function useProgress() {
     level: getLevel(),
     addXp,
     addStars,
-    useHeart,
     refresh,
     bumpMission,
     claimMission,

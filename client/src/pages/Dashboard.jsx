@@ -1,4 +1,4 @@
-import { Star, BookOpen, Target, Heart, Zap, Trophy, LogOut } from 'lucide-react'
+import { Star, Target, Zap, Trophy, LogOut } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Card3D, StatCard, ProgressBar, Badge, Button3D, ButtonOutline } from '@/design-system/components'
 import { FlameSVG, HandMascot } from '@/design-system/icons'
@@ -24,7 +24,6 @@ export default function Dashboard() {
 
   const xp = progress?.xp ?? 0
   const stars = progress?.stars ?? 0
-  const hearts = progress?.hearts ?? 0
   const streak = progress?.streak ?? 0
   const dailyXp = progress?.daily_xp ?? 0
   const dailyProgress = Math.min(1, dailyXp / DAILY_CAP)
@@ -106,7 +105,7 @@ export default function Dashboard() {
         </Card3D>
 
         {/* Currency grid */}
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="lg:col-span-2 grid grid-cols-3 gap-3">
           <StatCard
             icon={<Zap size={18} color={COLORS.yellow} strokeWidth={2.5} fill={COLORS.yellow} />}
             value={xp.toLocaleString()}
@@ -118,12 +117,6 @@ export default function Dashboard() {
             value={stars.toLocaleString()}
             label={lang === 'ko' ? '스타' : 'Stars'}
             color={COLORS.yellow}
-          />
-          <StatCard
-            icon={<Heart size={18} fill={hearts > 0 ? COLORS.red : 'none'} stroke={COLORS.red} strokeWidth={2.5} />}
-            value={`${hearts}/5`}
-            label={lang === 'ko' ? '하트' : 'Hearts'}
-            color={COLORS.red}
           />
           <StatCard
             icon={<FlameSVG size={20} />}

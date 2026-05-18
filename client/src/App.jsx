@@ -6,6 +6,7 @@ import LessonPlay from './pages/LessonPlay'
 import MissionMode from './pages/MissionMode'
 import FingerspellingChallenge from './pages/FingerspellingChallenge'
 import QuizMode from './pages/QuizMode'
+import PhotoQuizMode from './pages/PhotoQuizMode'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Landing from './pages/Landing'
@@ -26,6 +27,7 @@ function App() {
           <Route path="/missions" element={<MissionMode />} />
           <Route path="/missions/fingerspelling" element={<FingerspellingChallenge />} />
           <Route path="/missions/quiz" element={<QuizMode />} />
+          <Route path="/missions/photo-quiz" element={<PhotoQuizMode />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="/record" element={<Record />} />

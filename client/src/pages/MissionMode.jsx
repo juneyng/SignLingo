@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Target, Zap, Gift, Clock, Award, Lock, Trophy, BookOpen } from 'lucide-react'
+import { Target, Zap, Gift, Clock, Award, Lock, Trophy, BookOpen, Brain, Camera } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Card3D, AccentCard } from '@/design-system/components'
 import useLanguage from '@/stores/useLanguage'
@@ -74,14 +74,14 @@ export default function MissionMode() {
               {lang === 'ko' ? '지문자 10초' : 'Fingerspell 10s'}
             </p>
           </AccentCard>
-          <AccentCard color={COLORS.blue} darkColor={COLORS.blueDark} onClick={() => navigate('/lessons/fingerspelling')}>
-            <Target size={22} color="white" strokeWidth={2.5} />
+          <AccentCard color={COLORS.blue} darkColor={COLORS.blueDark} onClick={() => navigate('/missions/photo-quiz')}>
+            <Camera size={22} color="white" strokeWidth={2.5} />
             <p className="text-white font-extrabold text-xs mt-2">
-              {lang === 'ko' ? '자모 연습' : 'Fingerspell drill'}
+              {lang === 'ko' ? '사진 퀴즈' : 'Photo Quiz'}
             </p>
           </AccentCard>
           <AccentCard color={COLORS.purple} darkColor={COLORS.purpleDark} onClick={() => navigate('/missions/quiz')}>
-            <BookOpen size={22} color="white" strokeWidth={2.5} />
+            <Brain size={22} color="white" strokeWidth={2.5} />
             <p className="text-white font-extrabold text-xs mt-2">
               {lang === 'ko' ? '수어 퀴즈' : 'Sign Quiz'}
             </p>

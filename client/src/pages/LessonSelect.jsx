@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, HandMetal, Users, Smile, Hash, Heart, Home as HomeIcon, Play, BookA, MessageCircle } from 'lucide-react'
+import { ChevronRight, HandMetal, Users, Smile, Hash, Heart, Home as HomeIcon, Play, BookA, MessageCircle, Sparkles } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Card3D, ProgressBar, ProgressRing, Badge } from '@/design-system/components'
 import { UNITS, TOTAL_SIGNS } from '@/data/signDatabase'
 import useLanguage from '@/stores/useLanguage'
 
 const UNIT_ICONS = {
+  intro_demo: Sparkles,
   fingerspelling: BookA,
   greetings: Users,
   responses: Smile,
@@ -18,7 +19,7 @@ const UNIT_ICONS = {
 }
 
 const UNIT_COLORS = [
-  COLORS.purple, COLORS.green, COLORS.blue, COLORS.orange,
+  COLORS.yellow, COLORS.purple, COLORS.green, COLORS.blue, COLORS.orange,
   COLORS.yellow, COLORS.red, COLORS.green, COLORS.blue, COLORS.purple,
 ]
 
@@ -69,6 +70,7 @@ export default function LessonSelect() {
                     <Badge color={color}>
                       {unit.signs.length} {lang === 'ko' ? '개' : 'signs'}
                     </Badge>
+                    {unit.isDemo && <Badge color={COLORS.yellow}>DEMO</Badge>}
                   </div>
                   <p className="text-xs font-semibold mt-0.5" style={{ color: COLORS.gray400 }}>
                     {lang === 'ko' ? unit.descKo : unit.descEn}

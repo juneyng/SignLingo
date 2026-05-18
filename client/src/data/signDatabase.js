@@ -631,9 +631,33 @@ const unit8 = [
 ].filter(Boolean)
 
 // ============================================================
+// UNIT 0 (DEMO): 자기소개 데모 — alias-only mini lesson
+// Temporary demo lesson — re-uses 4 signs from other units so a
+// learner can do "intro yourself" in one tight 4-card flow.
+// ============================================================
+const findAnySign = (id) =>
+  [...unit1, ...unit2, ...unit3, ...unit4, ...unit6, ...unit7].find((s) => s.id === id)
+
+const unitIntroDemo = [
+  findAnySign('hello'),         // 안녕하세요
+  findAnySign('nicetomeet'),    // 만나서 반갑습니다
+  findAnySign('name'),          // 이름
+  findAnySign('age'),           // 나이
+].filter(Boolean)
+
+// ============================================================
 // EXPORTS
 // ============================================================
 export const UNITS = [
+  {
+    id: 'intro_demo',
+    titleEn: 'Quick Intro (Demo)',
+    titleKo: '자기소개 (데모)',
+    descEn: 'Hello, Nice to meet you, Name, Age',
+    descKo: '안녕하세요·만나서 반갑습니다·이름·나이',
+    signs: unitIntroDemo,
+    isDemo: true,
+  },
   {
     id: 'fingerspelling',
     titleEn: 'Korean Fingerspelling',

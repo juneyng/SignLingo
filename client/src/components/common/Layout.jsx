@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Home, BookOpen, Target, BarChart3, Settings, Star, Heart, PanelRightClose, PanelRightOpen, Video, HelpCircle, Zap, Brain } from 'lucide-react'
+import { Home, BookOpen, Target, BarChart3, Settings, Star, PanelRightClose, PanelRightOpen, Video, HelpCircle, Zap, Brain } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { SidebarItem, LeaderboardRow } from '@/design-system/components'
 import DailyMissionCard from './DailyMissionCard'
+import { fetchLeaderboard } from '@/services/api'
 import { FlameSVG } from '@/design-system/icons'
 import useAuth from '@/hooks/useAuth'
 import useProgress from '@/hooks/useProgress'
@@ -104,13 +105,6 @@ export default function Layout() {
               title={lang === 'ko' ? '연속 출석' : 'Streak'}
             />
             <HudStat
-              icon={<Heart size={16} fill={progress?.hearts > 0 ? COLORS.red : 'none'} stroke={COLORS.red} strokeWidth={2.5} />}
-              value={`${progress?.hearts ?? 0}/5`}
-              color={COLORS.red}
-              dimmed={!user}
-              title={lang === 'ko' ? '하트' : 'Hearts'}
-            />
-            <HudStat
               icon={<Star size={16} fill={COLORS.yellow} stroke={COLORS.yellowDark} strokeWidth={2.5} />}
               value={progress?.stars ?? 0}
               color={COLORS.yellow}
@@ -173,11 +167,7 @@ export default function Layout() {
                 <h3 className="font-extrabold text-sm mb-3" style={{ color: COLORS.gray800 }}>
                   {lang === 'ko' ? '리더보드' : 'Leaderboard'}
                 </h3>
-                <div>
-                  <LeaderboardRow rank={1} name="SignMaster" xp={2450} />
-                  <LeaderboardRow rank={2} name="HandsTalking" xp={1820} />
-                  <LeaderboardRow rank={3} name="KSLearner" xp={1340} />
-                </div>
+                <LiveLeaderboard currentUserId={user?.id} lang={lang} />
               </div>
             </aside>
           )}
@@ -258,6 +248,59 @@ export function DailyMissionList({ lang, compact = false }) {
           compact={compact}
         />
       ))}
+    </div>
+  )
+}
+
+function LiveLeaderboard({ currentUserId, lang }) {
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { row: progress } = useProgress()
+
+  useEffect(() => {
+    let cancelled = false
+    fetchLeaderboard()
+      .then((data) => {
+        if (!cancelled) setRows(data || [])
+      })
+      .catch((e) => console.warn('[Leaderboard] fetch failed:', e.message))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+    // Re-fetch when the user's own XP changes (rough trigger)
+  }, [progress?.xp])
+
+  if (loading && rows.length === 0) {
+    return (
+      <p className="text-xs font-bold py-3 text-center" style={{ color: COLORS.gray400 }}>
+        {lang === 'ko' ? '불러오는 중...' : 'Loading...'}
+      </p>
+    )
+  }
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-xs font-bold py-3 text-center" style={{ color: COLORS.gray400 }}>
+        {lang === 'ko' ? '아직 데이터가 없어요' : 'No data yet'}
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      {rows.slice(0, 10).map((r, i) => {
+        const name = r.profiles?.display_name
+          || (lang === 'ko' ? '익명' : 'Anon')
+        const xp = r.xp ?? r.total_points ?? 0
+        return (
+          <LeaderboardRow
+            key={r.user_id}
+            rank={i + 1}
+            name={name}
+            xp={xp}
+            isMe={r.user_id === currentUserId}
+          />
+        )
+      })}
     </div>
   )
 }

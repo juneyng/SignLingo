@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, X, Play, Zap, Heart, Timer, ChevronRight, RotateCcw } from 'lucide-react'
+import { ArrowLeft, X, Play, Zap, Timer, ChevronRight, RotateCcw } from 'lucide-react'
 import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline, Card3D, ProgressBar, Badge } from '@/design-system/components'
 import { HandMascot } from '@/design-system/icons'
@@ -10,7 +10,6 @@ import { compareSigns } from '@/utils/compareSigns'
 import { getRecordedSign, preloadRecordedSigns } from '@/services/signStorage'
 import { UNITS } from '@/data/signDatabase'
 import useLanguage from '@/stores/useLanguage'
-import useAuth from '@/hooks/useAuth'
 import useProgress from '@/hooks/useProgress'
 import useCombo, { comboMultiplier } from '@/stores/useCombo'
 import ComboDisplay from '@/components/common/ComboDisplay'
@@ -20,7 +19,6 @@ const PHASE = {
   COUNTDOWN: 'countdown',
   PLAY: 'play',
   RESULT: 'result',
-  NO_HEARTS: 'no_hearts',
 }
 
 const SUCCESS_THRESHOLD = 75   // PDF: ±15% lenient (80 → 75)
@@ -42,8 +40,7 @@ function timeLimitForSign(sign) {
 export default function FingerspellingChallenge() {
   const navigate = useNavigate()
   const { lang } = useLanguage()
-  const { user } = useAuth()
-  const { row: progress, addXp, addStars, useHeart, bumpMission } = useProgress()
+  const { addXp, addStars, bumpMission } = useProgress()
   const comboCount = useCombo((s) => s.combo)
   const comboIncrement = useCombo((s) => s.increment)
   const comboBreak = useCombo((s) => s.break)
@@ -146,7 +143,6 @@ export default function FingerspellingChallenge() {
       }
     } else {
       comboBreak()
-      try { await useHeart() } catch (e) { /* ignore */ }
     }
 
     try { await bumpMission('challenge_done') } catch (e) { /* ignore */ }
@@ -163,10 +159,6 @@ export default function FingerspellingChallenge() {
   }
 
   const start = () => {
-    if (user && (progress?.hearts ?? 5) <= 0) {
-      setPhase(PHASE.NO_HEARTS)
-      return
-    }
     const sign = pickRandomSign()
     if (!sign) return
     const limit = timeLimitForSign(sign)
@@ -220,11 +212,7 @@ export default function FingerspellingChallenge() {
       )}
 
       {phase === PHASE.INTRO && (
-        <IntroScreen lang={lang} onStart={start} tracking={tracking} progress={progress} />
-      )}
-
-      {phase === PHASE.NO_HEARTS && (
-        <NoHeartsScreen lang={lang} onBack={() => navigate('/missions')} />
+        <IntroScreen lang={lang} onStart={start} tracking={tracking} />
       )}
 
       {/*
@@ -345,8 +333,7 @@ export default function FingerspellingChallenge() {
   )
 }
 
-function IntroScreen({ lang, onStart, tracking, progress }) {
-  const hearts = progress?.hearts ?? 5
+function IntroScreen({ lang, onStart, tracking }) {
   return (
     <Card3D color={COLORS.orange} padding="p-6">
       <div className="flex items-center gap-4">
@@ -363,16 +350,15 @@ function IntroScreen({ lang, onStart, tracking, progress }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mt-5 text-center">
+      <div className="grid grid-cols-2 gap-3 mt-5 text-center">
         <Stat label={lang === 'ko' ? '제한 시간' : 'Time'} value="10s" color={COLORS.green} />
         <Stat label={lang === 'ko' ? '기본 보상' : 'Base XP'} value={`+${BASE_XP}`} color={COLORS.yellow} />
-        <Stat label={lang === 'ko' ? '내 하트' : 'Your hearts'} value={`${hearts}/5`} color={COLORS.red} />
       </div>
 
       <ul className="mt-5 space-y-1.5 text-xs font-bold" style={{ color: COLORS.gray600 }}>
         <li>• {lang === 'ko' ? '일치도 75% 이상 도달 시 즉시 성공' : 'Hit 75% match for instant success'}</li>
         <li>• {lang === 'ko' ? '잔여 시간 비율 × 10 만큼 스타 보너스' : 'Time bonus: up to +10 stars based on remaining time'}</li>
-        <li>• {lang === 'ko' ? '실패 시 하트 1개 차감' : 'Fail: -1 heart'}</li>
+        <li>• {lang === 'ko' ? '성공 시 +25 XP × 콤보 배율' : 'Success: +25 XP × combo multiplier'}</li>
       </ul>
 
       <div className="mt-5">
@@ -382,27 +368,6 @@ function IntroScreen({ lang, onStart, tracking, progress }) {
             ? (lang === 'ko' ? '시작!' : 'Start!')
             : (lang === 'ko' ? '카메라 준비 중...' : 'Loading camera...')}
         </Button3D>
-      </div>
-    </Card3D>
-  )
-}
-
-function NoHeartsScreen({ lang, onBack }) {
-  return (
-    <Card3D color={COLORS.red} padding="p-6" className="text-center">
-      <Heart size={48} color={COLORS.red} className="mx-auto" />
-      <h2 className="text-xl font-black mt-3" style={{ color: COLORS.gray800 }}>
-        {lang === 'ko' ? '하트가 모두 소진됐어요' : 'Out of hearts'}
-      </h2>
-      <p className="text-sm font-semibold mt-2" style={{ color: COLORS.gray500 }}>
-        {lang === 'ko'
-          ? '20분마다 하트가 1개씩 회복됩니다. 그동안은 일반 레슨에서 안전하게 연습할 수 있어요.'
-          : 'Hearts refill 1 per 20 minutes. Practice safely in regular lessons meanwhile.'}
-      </p>
-      <div className="mt-5 flex gap-2 justify-center">
-        <ButtonOutline color={COLORS.gray400} onClick={onBack}>
-          {lang === 'ko' ? '돌아가기' : 'Go back'}
-        </ButtonOutline>
       </div>
     </Card3D>
   )
