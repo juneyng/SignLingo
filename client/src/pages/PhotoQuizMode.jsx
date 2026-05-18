@@ -33,19 +33,30 @@ export default function PhotoQuizMode() {
   const [history, setHistory] = useState([])
   const [correctStreak, setCorrectStreak] = useState(0)
   const optionVideoRefs = useRef([])
+  const [videoErrors, setVideoErrors] = useState({}) // index -> bool
+  const [videoReady, setVideoReady] = useState({})   // index -> bool
 
-  useEffect(() => { preloadRecordedSigns() }, [])
+  // Track whether the Supabase preload has finished so the first round
+  // doesn't fire before the URL cache is populated.
+  const [preloaded, setPreloaded] = useState(false)
+  useEffect(() => {
+    preloadRecordedSigns().then(() => setPreloaded(true))
+  }, [])
 
   const startRound = async (n = 1) => {
+    // Make sure the cache is populated before we look up video URLs
+    await preloadRecordedSigns()
+
     const entry = pickRandomPhotoEntry(usedIds)
     usedIds.add(entry.id)
     const built = buildPhotoRound(entry)
-    // Pre-fetch video URLs for all 4 options
     const videoUrls = await Promise.all(
       built.options.map((id) => getSignVideo(id).catch(() => null))
     )
     setRound({ ...built, videoUrls })
     setSelected(null)
+    setVideoErrors({})
+    setVideoReady({})
     setRoundNum(n)
     setPhase(PHASE.PLAY)
   }
@@ -140,7 +151,7 @@ export default function PhotoQuizMode() {
         <ProgressBar progress={(roundNum / ROUNDS_PER_SESSION) * 100} color={COLORS.blue} height="h-2" />
       )}
 
-      {phase === PHASE.INTRO && <IntroScreen lang={lang} onStart={startSession} />}
+      {phase === PHASE.INTRO && <IntroScreen lang={lang} onStart={startSession} ready={preloaded} />}
 
       {(phase === PHASE.PLAY || phase === PHASE.FEEDBACK) && round && (
         <Card3D color={COLORS.gray200} padding="p-5">
@@ -201,17 +212,40 @@ export default function PhotoQuizMode() {
                       {ribbon.icon}
                     </div>
                   )}
-                  <div className="aspect-video bg-black">
-                    {videoUrl ? (
-                      <video
-                        ref={(el) => (optionVideoRefs.current[i] = el)}
-                        src={videoUrl}
-                        className="w-full h-full object-cover"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                      />
+                  <div className="aspect-video bg-black relative">
+                    {videoUrl && !videoErrors[i] ? (
+                      <>
+                        <video
+                          ref={(el) => (optionVideoRefs.current[i] = el)}
+                          src={videoUrl}
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          onCanPlay={(e) => {
+                            setVideoReady((s) => ({ ...s, [i]: true }))
+                            // Some browsers throttle autoplay when 4 videos
+                            // start at once. Nudge play() explicitly.
+                            const v = e.currentTarget
+                            const playPromise = v.play()
+                            if (playPromise && playPromise.catch) {
+                              playPromise.catch(() => {
+                                // ignore — onError handler will catch fatal errors
+                              })
+                            }
+                          }}
+                          onError={() => {
+                            console.warn('[PhotoQuiz] video error for option', i, videoUrl)
+                            setVideoErrors((s) => ({ ...s, [i]: true }))
+                          }}
+                        />
+                        {!videoReady[i] && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
+                            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center"
                         style={{ background: COLORS.gray100 }}>
@@ -260,7 +294,7 @@ export default function PhotoQuizMode() {
   )
 }
 
-function IntroScreen({ lang, onStart }) {
+function IntroScreen({ lang, onStart, ready = true }) {
   return (
     <Card3D color={COLORS.blue} padding="p-6">
       <div className="flex items-center gap-4">
@@ -292,8 +326,11 @@ function IntroScreen({ lang, onStart }) {
           darkColor={COLORS.blueDark}
           icon={<Camera size={18} />}
           onClick={onStart}
+          disabled={!ready}
         >
-          {lang === 'ko' ? '퀴즈 시작' : 'Start Quiz'}
+          {ready
+            ? (lang === 'ko' ? '퀴즈 시작' : 'Start Quiz')
+            : (lang === 'ko' ? '영상 불러오는 중...' : 'Loading videos...')}
         </Button3D>
       </div>
     </Card3D>
