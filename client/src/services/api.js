@@ -62,31 +62,19 @@ export async function completeSign(userId, signId, score) {
   return data
 }
 
-// Leaderboard
-// We fetch progress and profiles in two steps because user_progress.user_id
-// references auth.users (not public.profiles), so PostgREST can't infer an
-// FK relationship for a single embedded select.
-export async function fetchLeaderboard() {
+// Leaderboard — uses a security-definer RPC because user_progress and
+// profiles both have RLS restricting SELECT to the owner. The RPC only
+// returns public-safe columns (user_id, display_name, xp, streak).
+export async function fetchLeaderboard(limit = 20) {
   if (!isSupabaseConfigured) return []
-  const { data: progressRows, error: e1 } = await supabase
-    .from('user_progress')
-    .select('user_id, total_points, xp, streak')
-    .order('xp', { ascending: false })
-    .limit(20)
-  if (e1) throw e1
-  if (!progressRows || progressRows.length === 0) return []
-
-  const userIds = progressRows.map((r) => r.user_id)
-  const { data: profileRows, error: e2 } = await supabase
-    .from('profiles')
-    .select('id, display_name')
-    .in('id', userIds)
-  if (e2) console.warn('[fetchLeaderboard] profiles fetch failed:', e2.message)
-
-  const nameById = new Map((profileRows || []).map((p) => [p.id, p.display_name]))
-  return progressRows.map((r) => ({
-    ...r,
-    profiles: { display_name: nameById.get(r.user_id) || null },
+  const { data, error } = await supabase.rpc('get_leaderboard', { p_limit: limit })
+  if (error) throw error
+  return (data || []).map((r) => ({
+    user_id: r.user_id,
+    xp: r.xp,
+    streak: r.streak,
+    total_points: r.xp, // legacy alias for older callers
+    profiles: { display_name: r.display_name },
   }))
 }
 
