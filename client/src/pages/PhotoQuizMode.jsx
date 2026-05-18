@@ -213,22 +213,22 @@ export default function PhotoQuizMode() {
                         playsInline
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-center px-2"
+                      <div className="w-full h-full flex items-center justify-center"
                         style={{ background: COLORS.gray100 }}>
-                        <p className="text-2xl font-black" style={{ color: COLORS.purple }}>
-                          {sign?.name_ko ?? signId}
-                        </p>
-                        <p className="text-[9px] font-bold mt-1" style={{ color: COLORS.gray400 }}>
-                          {lang === 'ko' ? '(영상 미녹화)' : '(no video)'}
-                        </p>
+                        <p className="text-3xl font-black" style={{ color: COLORS.gray400 }}>?</p>
                       </div>
                     )}
                   </div>
-                  <div className="px-2 py-1.5 text-center">
-                    <p className="text-xs font-black truncate" style={{ color: COLORS.gray800 }}>
-                      {lang === 'ko' ? (sign?.name_ko ?? signId) : (sign?.name_en ?? signId)}
-                    </p>
-                  </div>
+                  {/* Label only shown after the user has answered — hiding it during
+                      PLAY keeps the puzzle real (otherwise it would spoil the answer). */}
+                  {phase === PHASE.FEEDBACK && (
+                    <div className="px-2 py-1.5 text-center"
+                      style={{ background: isCorrectOpt ? `${COLORS.green}10` : isChosen ? `${COLORS.red}10` : 'white' }}>
+                      <p className="text-xs font-black truncate" style={{ color: COLORS.gray800 }}>
+                        {lang === 'ko' ? (sign?.name_ko ?? signId) : (sign?.name_en ?? signId)}
+                      </p>
+                    </div>
+                  )}
                 </button>
               )
             })}
