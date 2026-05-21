@@ -21,7 +21,7 @@ const PHASE = {
   RESULT: 'result',
 }
 
-const SUCCESS_THRESHOLD = 75   // PDF: ±15% lenient (80 → 75)
+const SUCCESS_THRESHOLD = 85   // strict — user-tuned for sharper success bar
 const BASE_XP = 25
 
 function pickRandomSign() {
@@ -356,7 +356,7 @@ function IntroScreen({ lang, onStart, tracking }) {
       </div>
 
       <ul className="mt-5 space-y-1.5 text-xs font-bold" style={{ color: COLORS.gray600 }}>
-        <li>• {lang === 'ko' ? '일치도 75% 이상 도달 시 즉시 성공' : 'Hit 75% match for instant success'}</li>
+        <li>• {lang === 'ko' ? `일치도 ${SUCCESS_THRESHOLD}% 이상 도달 시 즉시 성공` : `Hit ${SUCCESS_THRESHOLD}% match for instant success`}</li>
         <li>• {lang === 'ko' ? '잔여 시간 비율 × 10 만큼 스타 보너스' : 'Time bonus: up to +10 stars based on remaining time'}</li>
         <li>• {lang === 'ko' ? '성공 시 +25 XP × 콤보 배율' : 'Success: +25 XP × combo multiplier'}</li>
       </ul>
