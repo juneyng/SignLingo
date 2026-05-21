@@ -8,9 +8,11 @@ import { fetchLeaderboard } from '@/services/api'
 import { FlameSVG } from '@/design-system/icons'
 import useAuth from '@/hooks/useAuth'
 import useProgress from '@/hooks/useProgress'
+import useProfile from '@/hooks/useProfile'
 import { signOut } from '@/services/auth'
 import useLanguage from '@/stores/useLanguage'
 import OnboardingTour from './OnboardingTour'
+import OnboardingConsentModal from './OnboardingConsentModal'
 import { preloadRecordedSigns } from '@/services/signStorage'
 
 export default function Layout() {
@@ -18,8 +20,14 @@ export default function Layout() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { row: progress, level } = useProgress()
+  const { profile, loaded: profileLoaded } = useProfile()
   const { t, lang, toggle } = useLanguage()
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
+
+  // Logged-in users must complete the privacy + nickname onboarding once.
+  // Show ONLY after the profile has actually loaded — never on a fetch
+  // error / loading state — so a network blip can't flash the modal.
+  const needsConsent = !!(user && profileLoaded && profile && !profile.consent_at)
 
   // Preload sign recordings from Supabase once on mount
   useEffect(() => { preloadRecordedSigns() }, [])
@@ -36,6 +44,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex" style={{ background: COLORS.bg }}>
+      {needsConsent && <OnboardingConsentModal />}
       <OnboardingTour />
       {/* Left Sidebar */}
       <aside
@@ -73,7 +82,7 @@ export default function Layout() {
           {user ? (
             <button
               onClick={() => navigate('/dashboard')}
-              title={user.email || user.user_metadata?.full_name}
+              title={profile?.display_name || user.email || user.user_metadata?.full_name}
               className="w-12 h-12 rounded-full flex items-center justify-center font-black text-base cursor-pointer transition-all hover:scale-110 mt-1"
               style={{
                 background: location.pathname.startsWith('/dashboard') ? COLORS.purple : `${COLORS.purple}25`,
@@ -81,7 +90,10 @@ export default function Layout() {
                 border: `2px solid ${COLORS.purple}40`,
               }}
             >
-              {(user.user_metadata?.full_name || user.email || '?').charAt(0).toUpperCase()}
+              {(profile?.display_name || user.user_metadata?.full_name || user.email || '?')
+                .trim()
+                .charAt(0)
+                .toUpperCase() || '?'}
             </button>
           ) : (
             <SidebarItem icon={Settings} label={t.login} active={false} onClick={() => navigate('/login')} />

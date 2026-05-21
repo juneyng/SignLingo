@@ -79,6 +79,38 @@ export async function fetchLeaderboard(limit = 20) {
 }
 
 // ============================================================
+// Profile
+// ============================================================
+
+export async function fetchProfile(userId) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, email, consent_at, created_at')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/**
+ * Update the caller's profile. `updates` may include display_name
+ * and/or consent_at. RLS guarantees the user can only update their
+ * own row.
+ */
+export async function updateProfile(userId, updates) {
+  if (!isSupabaseConfigured) return null
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// ============================================================
 // Gamification — XP / Stars / Hearts / Streak
 // ============================================================
 

@@ -5,6 +5,7 @@ import { FlameSVG, HandMascot } from '@/design-system/icons'
 import useLanguage from '@/stores/useLanguage'
 import useAuth from '@/hooks/useAuth'
 import useProgress from '@/hooks/useProgress'
+import useProfile from '@/hooks/useProfile'
 import { signOut } from '@/services/auth'
 import { xpForNext } from '@/utils/leveling'
 
@@ -14,8 +15,11 @@ export default function Dashboard() {
   const { t, lang } = useLanguage()
   const { user } = useAuth()
   const { row: progress, level, loading } = useProgress()
+  const { profile } = useProfile()
 
-  const displayName = user?.user_metadata?.full_name
+  const displayName =
+    profile?.display_name?.trim()
+    || user?.user_metadata?.full_name
     || user?.user_metadata?.name
     || user?.email?.split('@')[0]
     || (lang === 'ko' ? '게스트' : 'Guest')

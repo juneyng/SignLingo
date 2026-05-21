@@ -4,6 +4,8 @@ import { COLORS } from '@/design-system/colors'
 import { Button3D, ButtonOutline } from '@/design-system/components'
 import { HandMascot } from '@/design-system/icons'
 import useLanguage from '@/stores/useLanguage'
+import useAuth from '@/hooks/useAuth'
+import useProfile from '@/hooks/useProfile'
 
 const STORAGE_KEY = 'signlingo_onboarding_completed'
 
@@ -76,18 +78,28 @@ const STEPS = {
 
 export default function OnboardingTour() {
   const { lang } = useLanguage()
+  const { user } = useAuth()
+  const { profile, loaded: profileLoaded } = useProfile()
   const [active, setActive] = useState(false)
   const [stepIdx, setStepIdx] = useState(0)
   const [targetRect, setTargetRect] = useState(null)
 
-  // Show on first visit
+  // When logged in, defer auto-start until the privacy consent has
+  // been accepted — otherwise both modals overlap on first sign-in.
+  const consentPending = !!(user && profileLoaded && profile && !profile.consent_at)
+
+  // Auto-start on first visit (after consent if logged in)
   useEffect(() => {
+    if (consentPending) return
     const completed = localStorage.getItem(STORAGE_KEY)
     if (!completed) {
-      setTimeout(() => setActive(true), 600)
+      const t = setTimeout(() => setActive(true), 600)
+      return () => clearTimeout(t)
     }
+  }, [consentPending])
 
-    // Listen for replay event from Help button
+  // Replay event from Help button — always honor, regardless of consent
+  useEffect(() => {
     const replayHandler = () => {
       setStepIdx(0)
       setTargetRect(null)
@@ -96,6 +108,12 @@ export default function OnboardingTour() {
     window.addEventListener('signlingo:replay-tour', replayHandler)
     return () => window.removeEventListener('signlingo:replay-tour', replayHandler)
   }, [])
+
+  // Force-close the tour if the consent modal opens (covers the edge
+  // case where the tour started before the profile finished loading).
+  useEffect(() => {
+    if (consentPending && active) setActive(false)
+  }, [consentPending, active])
 
   const steps = STEPS[lang] || STEPS.en
   const currentStep = steps[stepIdx]
