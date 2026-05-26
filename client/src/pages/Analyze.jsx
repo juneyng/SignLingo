@@ -295,7 +295,7 @@ export default function Analyze() {
                 ref={videoRef}
                 src={videoUrl}
                 className="w-full rounded-2xl"
-                style={{ border: `2px solid ${COLORS.gray200}` }}
+                style={{ border: `2px solid ${COLORS.gray200}`, transform: 'scaleX(-1)' }}
                 controls
                 crossOrigin="anonymous"
               />

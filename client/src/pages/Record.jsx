@@ -259,7 +259,7 @@ function RegistrationStatus({ lang, onPick, lastSavedResult }) {
               controls
               autoPlay
               loop
-              style={{ background: COLORS.gray900 }}
+              style={{ background: COLORS.gray900, transform: 'scaleX(-1)' }}
             />
           </div>
         </div>
@@ -385,7 +385,7 @@ function UploadTab({ lang, result, setResult, setVideoFile, selectedSignId, cust
           </label>
         ) : (
           <div>
-            <video ref={videoRef} src={videoUrl} className="w-full rounded-2xl" style={{ border: `2px solid ${COLORS.gray200}` }} controls crossOrigin="anonymous" />
+            <video ref={videoRef} src={videoUrl} className="w-full rounded-2xl" style={{ border: `2px solid ${COLORS.gray200}`, transform: 'scaleX(-1)' }} controls crossOrigin="anonymous" />
             <canvas ref={canvasRef} className="hidden" />
             <div className="flex gap-2 mt-3">
               <label className="cursor-pointer">

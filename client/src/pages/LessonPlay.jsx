@@ -331,7 +331,7 @@ export default function LessonPlay() {
                 loop
                 muted
                 playsInline
-                style={{ background: COLORS.gray50 }}
+                style={{ background: COLORS.gray50, transform: 'scaleX(-1)' }}
               />
               {localVideoUrl && (
                 <div className="px-3 py-1 text-center" style={{ background: COLORS.greenLight }}>

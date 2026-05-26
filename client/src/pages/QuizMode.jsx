@@ -166,6 +166,7 @@ export default function QuizMode() {
                   key={round.correctSignId}
                   src={round.videoUrl}
                   className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
                   autoPlay
                   loop
                   muted
